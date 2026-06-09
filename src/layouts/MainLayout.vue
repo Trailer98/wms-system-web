@@ -4,6 +4,7 @@
       <div class="logo">WMS System</div>
       <nav class="top-nav">
         <router-link to="/">首页</router-link>
+        <router-link to="/operation-logs">日志查询</router-link>
         <router-link to="/settings">设置</router-link>
       </nav>
     </header>
@@ -12,6 +13,7 @@
       <aside class="layout-sidebar">
         <ul>
           <li><router-link to="/">仪表盘</router-link></li>
+          <li><router-link to="/operation-logs">日志查询</router-link></li>
           <li><router-link to="/settings">系统设置</router-link></li>
         </ul>
       </aside>

@@ -17,6 +17,11 @@ const routes = [
         component: () => import('../views/SettingsView.vue')
       },
       {
+        path: 'operation-logs',
+        name: 'OperationLogs',
+        component: () => import('../views/OperationLogsView.vue')
+      },
+      {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('../views/NotFoundView.vue')
