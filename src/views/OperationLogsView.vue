@@ -1,9 +1,9 @@
 <template>
-  <section class="logs-page">
+  <section class="page-shell">
     <div class="page-header">
       <div>
         <h2>日志查询</h2>
-        <p>按操作人、模块、状态和时间范围查询系统操作日志。</p>
+        <p>按操作人、操作类型、业务单号和时间范围查询系统操作日志。</p>
       </div>
     </div>
 
@@ -30,6 +30,7 @@
 import { inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { normalizePageResponse } from '../utils/apiResponse'
 
 const axios = inject('$axios')
 const loading = ref(false)
@@ -37,9 +38,8 @@ const logs = ref([])
 
 const queryForm = reactive({
   operator: '',
-  module: '',
   operationType: '',
-  status: '',
+  bizNo: '',
   timeRange: []
 })
 
@@ -58,17 +58,17 @@ const queryFields = [
     trim: true
   },
   {
-    prop: 'module',
-    label: '模块',
-    type: 'input',
-    placeholder: '请输入模块',
-    trim: true
-  },
-  {
     prop: 'operationType',
     label: '操作类型',
     type: 'input',
     placeholder: '新增 / 修改 / 删除',
+    trim: true
+  },
+  {
+    prop: 'bizNo',
+    label: '业务单号',
+    type: 'input',
+    placeholder: '请输入业务单号',
     trim: true
   },
   {
@@ -101,10 +101,10 @@ const tableColumns = [
     formatter: (row) => row.operationType || row.type || row.action || '-'
   },
   {
-    label: '请求地址',
-    minWidth: 180,
+    label: '业务单号',
+    minWidth: 150,
     showOverflowTooltip: true,
-    formatter: (row) => row.requestUri || row.url || row.path || '-'
+    formatter: (row) => row.bizNo || '-'
   },
   {
     label: 'IP 地址',
@@ -114,13 +114,13 @@ const tableColumns = [
   {
     label: '操作时间',
     minWidth: 170,
-    formatter: (row) => row.operationTime || row.createTime || row.createdAt || '-'
+    formatter: (row) => row.createTime || '-'
   },
   {
-    label: '描述',
+    label: '内容',
     minWidth: 200,
     showOverflowTooltip: true,
-    formatter: (row) => row.description || row.remark || row.message || '-'
+    formatter: (row) => row.content || '-'
   }
 ]
 
@@ -131,9 +131,8 @@ const buildParams = () => {
   }
 
   if (queryForm.operator) params.operator = queryForm.operator
-  if (queryForm.module) params.module = queryForm.module
   if (queryForm.operationType) params.operationType = queryForm.operationType
-  if (queryForm.status) params.status = queryForm.status
+  if (queryForm.bizNo) params.bizNo = queryForm.bizNo
   if (queryForm.timeRange?.length === 2) {
     params.startTime = queryForm.timeRange[0]
     params.endTime = queryForm.timeRange[1]
@@ -142,57 +141,13 @@ const buildParams = () => {
   return params
 }
 
-const normalizeResponse = (response) => {
-  const payload = response?.data ?? response
-  const pageData = payload?.records
-    ? payload
-    : payload?.data?.records
-      ? payload.data
-      : payload?.list
-        ? payload
-        : payload?.data?.list
-          ? payload.data
-          : payload?.content
-            ? payload
-            : payload?.data?.content
-              ? payload.data
-              : null
-
-  if (Array.isArray(payload)) {
-    return {
-      rows: payload,
-      total: payload.length
-    }
-  }
-
-  if (Array.isArray(payload?.data)) {
-    return {
-      rows: payload.data,
-      total: payload.total ?? payload.data.length
-    }
-  }
-
-  if (pageData) {
-    const rows = pageData.records || pageData.list || pageData.content || []
-    return {
-      rows,
-      total: pageData.total ?? pageData.totalElements ?? rows.length
-    }
-  }
-
-  return {
-    rows: [],
-    total: 0
-  }
-}
-
 const fetchLogs = async () => {
   loading.value = true
   try {
     const response = await axios.get('/operation-logs', {
       params: buildParams()
     })
-    const { rows, total } = normalizeResponse(response)
+    const { rows, total } = normalizePageResponse(response)
     logs.value = rows
     pagination.total = total
   } catch (error) {
@@ -210,9 +165,8 @@ const handleSearch = () => {
 
 const handleReset = () => {
   queryForm.operator = ''
-  queryForm.module = ''
   queryForm.operationType = ''
-  queryForm.status = ''
+  queryForm.bizNo = ''
   queryForm.timeRange = []
   pagination.pageNum = 1
   fetchLogs()
@@ -222,33 +176,4 @@ onMounted(fetchLogs)
 </script>
 
 <style scoped>
-.logs-page {
-  background: #fff;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0 0 8px;
-  color: #111827;
-}
-
-.page-header p {
-  margin: 0;
-  color: #64748b;
-}
-
-@media (max-width: 768px) {
-  .logs-page {
-    padding: 16px;
-  }
-}
 </style>

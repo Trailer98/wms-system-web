@@ -12,6 +12,31 @@ const routes = [
         component: () => import('../views/DashboardView.vue')
       },
       {
+        path: 'warehouses',
+        name: 'Warehouses',
+        component: () => import('../views/WarehousesView.vue')
+      },
+      {
+        path: 'skus',
+        name: 'Skus',
+        component: () => import('../views/SkusView.vue')
+      },
+      {
+        path: 'inventory',
+        name: 'Inventory',
+        component: () => import('../views/InventoryView.vue')
+      },
+      {
+        path: 'inbound-orders',
+        name: 'InboundOrders',
+        component: () => import('../views/InboundOrdersView.vue')
+      },
+      {
+        path: 'outbound-orders',
+        name: 'OutboundOrders',
+        component: () => import('../views/OutboundOrdersView.vue')
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/SettingsView.vue')

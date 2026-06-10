@@ -4,6 +4,9 @@
       <div class="logo">WMS System</div>
       <nav class="top-nav">
         <router-link to="/">首页</router-link>
+        <router-link to="/warehouses">仓库</router-link>
+        <router-link to="/skus">SKU</router-link>
+        <router-link to="/inventory">库存</router-link>
         <router-link to="/operation-logs">日志查询</router-link>
         <router-link to="/settings">设置</router-link>
       </nav>
@@ -13,6 +16,11 @@
       <aside class="layout-sidebar">
         <ul>
           <li><router-link to="/">仪表盘</router-link></li>
+          <li><router-link to="/warehouses">仓库管理</router-link></li>
+          <li><router-link to="/skus">SKU 管理</router-link></li>
+          <li><router-link to="/inventory">库存查询</router-link></li>
+          <li><router-link to="/inbound-orders">入库作业</router-link></li>
+          <li><router-link to="/outbound-orders">出库作业</router-link></li>
           <li><router-link to="/operation-logs">日志查询</router-link></li>
           <li><router-link to="/settings">系统设置</router-link></li>
         </ul>
@@ -26,7 +34,6 @@
 </template>
 
 <script setup>
-// 这是一个简单的布局组件，支持插槽内容
 </script>
 
 <style scoped>
@@ -56,6 +63,7 @@
   color: #cbd5e1;
   margin-left: 20px;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .top-nav a.router-link-exact-active {
@@ -107,5 +115,49 @@
   flex: 1;
   padding: 24px;
   background: #eef2ff;
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .layout-header {
+    align-items: flex-start;
+    flex-direction: column;
+    height: auto;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .top-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .top-nav a {
+    margin-left: 0;
+  }
+
+  .layout-body {
+    flex-direction: column;
+  }
+
+  .layout-sidebar {
+    width: 100%;
+    padding: 12px 16px;
+  }
+
+  .layout-sidebar ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .layout-sidebar li {
+    margin-bottom: 0;
+  }
+
+  .layout-content {
+    padding: 16px;
+  }
 }
 </style>
