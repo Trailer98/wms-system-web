@@ -16,9 +16,14 @@
         </el-col>
         <el-col :xs="24" :md="8">
           <el-form-item label="仓库" prop="warehouseId">
-            <el-select v-model="orderForm.warehouseId" filterable placeholder="请选择仓库">
+            <el-select
+              v-model="orderForm.warehouseId"
+              filterable
+              placeholder="请选择仓库"
+              @change="handleWarehouseChange"
+            >
               <el-option
-                v-for="warehouse in warehouses"
+                v-for="warehouse in warehouseOptions"
                 :key="warehouse.id"
                 :label="`${warehouse.code} - ${warehouse.name}`"
                 :value="warehouse.id"
@@ -35,20 +40,32 @@
 
       <div class="items-header">
         <h3>明细</h3>
-        <el-button @click="addItem">新增明细</el-button>
+        <el-button :disabled="!skuOptions.length" @click="addItem">新增明细</el-button>
       </div>
 
       <div class="order-items">
         <div v-for="(item, index) in orderForm.items" :key="index" class="order-item-row">
-          <el-select v-model="item.skuId" filterable placeholder="请选择 SKU">
+          <el-select
+            v-model="item.skuId"
+            filterable
+            placeholder="请选择 SKU"
+            :disabled="!orderForm.warehouseId"
+            @change="handleSkuChange(item)"
+          >
             <el-option
-              v-for="sku in skus"
+              v-for="sku in skuOptions"
               :key="sku.id"
-              :label="`${sku.code} - ${sku.name}`"
+              :label="`${sku.code} - ${sku.name}（可用 ${sku.availableQuantity}）`"
               :value="sku.id"
             />
           </el-select>
-          <el-input-number v-model="item.quantity" :min="1" :precision="0" controls-position="right" />
+          <el-input-number
+            v-model="item.quantity"
+            :min="1"
+            :max="itemMaxQuantity(item)"
+            :precision="0"
+            controls-position="right"
+          />
           <el-button :disabled="orderForm.items.length === 1" @click="removeItem(index)">删除</el-button>
         </div>
       </div>
@@ -84,14 +101,14 @@
 
 <script setup>
 import { ElMessage } from 'element-plus'
-import { inject, onMounted, reactive, ref } from 'vue'
+import { computed, inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData } from '../utils/apiResponse'
 
 const axios = inject('$axios')
 const saving = ref(false)
-const warehouses = ref([])
-const skus = ref([])
+const inventoryRecords = ref([])
+const skuOptions = ref([])
 const orders = ref([])
 const orderFormRef = ref()
 
@@ -122,13 +139,57 @@ const tableColumns = [
   { label: '创建时间', minWidth: 170, formatter: (row) => formatDateTime(row.createdAt) }
 ]
 
+const warehouseOptions = computed(() => {
+  const map = new Map()
+  inventoryRecords.value.forEach((record) => {
+    if (!map.has(record.warehouseId)) {
+      map.set(record.warehouseId, {
+        id: record.warehouseId,
+        code: record.warehouseCode,
+        name: record.warehouseName
+      })
+    }
+  })
+  return Array.from(map.values())
+})
+
 const fetchOptions = async () => {
-  const [warehouseResponse, skuResponse] = await Promise.all([
-    axios.get('/warehouses', { params: { pageNum: 1, pageSize: 100 } }),
-    axios.get('/skus', { params: { pageNum: 1, pageSize: 100 } })
-  ])
-  warehouses.value = normalizePageResponse(warehouseResponse).rows
-  skus.value = normalizePageResponse(skuResponse).rows
+  const response = await axios.get('/inventory', { params: { pageNum: 1, pageSize: 100 } })
+  inventoryRecords.value = normalizePageResponse(response).rows.filter((record) => record.availableQuantity > 0)
+}
+
+const loadSkuOptions = (warehouseId) => {
+  skuOptions.value = inventoryRecords.value
+    .filter((record) => record.warehouseId === warehouseId)
+    .map((record) => ({
+      id: record.skuId,
+      code: record.skuCode,
+      name: record.skuName,
+      availableQuantity: record.availableQuantity
+    }))
+}
+
+const itemMaxQuantity = (item) => {
+  const sku = skuOptions.value.find((option) => option.id === item.skuId)
+  if (!sku) return undefined
+
+  const usedByOtherRows = orderForm.items
+    .filter((other) => other !== item && other.skuId === item.skuId)
+    .reduce((sum, other) => sum + (Number(other.quantity) || 0), 0)
+
+  return Math.max(sku.availableQuantity - usedByOtherRows, 0)
+}
+
+const handleWarehouseChange = () => {
+  orderForm.items = [initialItem()]
+  loadSkuOptions(orderForm.warehouseId)
+}
+
+const handleSkuChange = (item) => {
+  const max = itemMaxQuantity(item)
+  if (max !== undefined && item.quantity > max) {
+    item.quantity = max > 0 ? max : 1
+  }
 }
 
 const addItem = () => {
@@ -144,6 +205,7 @@ const resetForm = () => {
   orderForm.warehouseId = ''
   orderForm.customerName = ''
   orderForm.items = [initialItem()]
+  skuOptions.value = []
   orderFormRef.value?.clearValidate()
 }
 
@@ -157,6 +219,19 @@ const validateItems = () => {
   if (invalid) {
     ElMessage.warning('请完整填写 SKU 和数量')
     return false
+  }
+
+  const quantityBySku = new Map()
+  orderForm.items.forEach((item) => {
+    quantityBySku.set(item.skuId, (quantityBySku.get(item.skuId) || 0) + Number(item.quantity))
+  })
+
+  for (const [skuId, totalQuantity] of quantityBySku) {
+    const sku = skuOptions.value.find((option) => option.id === skuId)
+    if (!sku || totalQuantity > sku.availableQuantity) {
+      ElMessage.warning(`SKU ${sku?.code || skuId} 出库数量超过当前库存`)
+      return false
+    }
   }
 
   return true
