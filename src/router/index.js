@@ -32,9 +32,19 @@ const routes = [
         component: () => import('../views/InboundOrdersView.vue')
       },
       {
+        path: 'inbound-orders/query',
+        name: 'InboundOrderQuery',
+        component: () => import('../views/InboundOrderQueryView.vue')
+      },
+      {
         path: 'outbound-orders',
         name: 'OutboundOrders',
         component: () => import('../views/OutboundOrdersView.vue')
+      },
+      {
+        path: 'outbound-orders/query',
+        name: 'OutboundOrderQuery',
+        component: () => import('../views/OutboundOrderQueryView.vue')
       },
       {
         path: 'settings',

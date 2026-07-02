@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2>出库作业</h2>
-        <p>创建出库单并对已创建单据执行发货扣减库存。</p>
+        <p>创建出库单，创建后请前往「出库单查询」页面执行发货扣减库存。</p>
       </div>
     </div>
 
@@ -77,17 +77,6 @@
         <template #items="{ row }">
           <span>{{ formatItems(row.items) }}</span>
         </template>
-        <template #actions="{ row }">
-          <el-button
-            type="primary"
-            link
-            :disabled="row.status !== 'CREATED'"
-            :loading="actionLoadingId === row.id"
-            @click="shipOrder(row)"
-          >
-            发货
-          </el-button>
-        </template>
       </CommonDataTable>
     </div>
   </section>
@@ -101,7 +90,6 @@ import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData 
 
 const axios = inject('$axios')
 const saving = ref(false)
-const actionLoadingId = ref(null)
 const warehouses = ref([])
 const skus = ref([])
 const orders = ref([])
@@ -131,8 +119,7 @@ const tableColumns = [
   { prop: 'customerName', label: '客户', minWidth: 160, showOverflowTooltip: true },
   { label: '明细', minWidth: 260, slot: 'items', showOverflowTooltip: true },
   { label: '发货时间', minWidth: 170, formatter: (row) => formatDateTime(row.shippedAt) },
-  { label: '创建时间', minWidth: 170, formatter: (row) => formatDateTime(row.createdAt) },
-  { label: '操作', width: 100, slot: 'actions', fixed: 'right', align: 'center' }
+  { label: '创建时间', minWidth: 170, formatter: (row) => formatDateTime(row.createdAt) }
 ]
 
 const fetchOptions = async () => {
@@ -196,18 +183,6 @@ const submitOrder = async () => {
     resetForm()
   } finally {
     saving.value = false
-  }
-}
-
-const shipOrder = async (row) => {
-  actionLoadingId.value = row.id
-  try {
-    const response = await axios.post(`/outbound-orders/${row.id}/ship`)
-    const nextOrder = unwrapApiData(response)
-    orders.value = orders.value.map((item) => (item.id === row.id ? nextOrder : item))
-    ElMessage.success('出库单发货成功')
-  } finally {
-    actionLoadingId.value = null
   }
 }
 

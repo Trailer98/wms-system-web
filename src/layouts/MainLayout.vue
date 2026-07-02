@@ -20,7 +20,9 @@
           <li><router-link to="/skus">SKU 管理</router-link></li>
           <li><router-link to="/inventory">库存查询</router-link></li>
           <li><router-link to="/inbound-orders">入库作业</router-link></li>
+          <li><router-link to="/inbound-orders/query">入库单查询</router-link></li>
           <li><router-link to="/outbound-orders">出库作业</router-link></li>
+          <li><router-link to="/outbound-orders/query">出库单查询</router-link></li>
           <li><router-link to="/operation-logs">日志查询</router-link></li>
           <li><router-link to="/settings">系统设置</router-link></li>
         </ul>

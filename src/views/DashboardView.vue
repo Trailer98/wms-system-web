@@ -21,8 +21,10 @@ const entries = [
   { title: '仓库管理', description: '新增仓库并查询仓库档案', path: '/warehouses' },
   { title: 'SKU 管理', description: '维护 SKU 编码、名称、单位和品类', path: '/skus' },
   { title: '库存查询', description: '查看现存量、占用量和可用量', path: '/inventory' },
-  { title: '入库作业', description: '创建入库单并执行收货', path: '/inbound-orders' },
-  { title: '出库作业', description: '创建出库单并执行发货', path: '/outbound-orders' },
+  { title: '入库作业', description: '创建入库单', path: '/inbound-orders' },
+  { title: '入库单查询', description: '查询入库单并执行收货', path: '/inbound-orders/query' },
+  { title: '出库作业', description: '创建出库单', path: '/outbound-orders' },
+  { title: '出库单查询', description: '查询出库单并执行发货', path: '/outbound-orders/query' },
   { title: '日志查询', description: '追踪业务操作记录', path: '/operation-logs' }
 ]
 </script>
