@@ -14,18 +14,46 @@
 
     <div class="layout-body">
       <aside class="layout-sidebar">
-        <ul>
-          <li><router-link to="/">仪表盘</router-link></li>
-          <li><router-link to="/warehouses">仓库管理</router-link></li>
-          <li><router-link to="/skus">SKU 管理</router-link></li>
-          <li><router-link to="/inventory">库存查询</router-link></li>
-          <li><router-link to="/inbound-orders">入库作业</router-link></li>
-          <li><router-link to="/inbound-orders/query">入库单查询</router-link></li>
-          <li><router-link to="/outbound-orders">出库作业</router-link></li>
-          <li><router-link to="/outbound-orders/query">出库单查询</router-link></li>
-          <li><router-link to="/operation-logs">日志查询</router-link></li>
-          <li><router-link to="/settings">系统设置</router-link></li>
-        </ul>
+        <el-menu
+          router
+          :default-active="route.path"
+          :default-openeds="activeGroups"
+          background-color="#1e293b"
+          text-color="#cbd5e1"
+          active-text-color="#ffffff"
+          class="layout-menu"
+        >
+          <el-menu-item index="/">仪表盘</el-menu-item>
+
+          <el-sub-menu index="basic-info">
+            <template #title>基础信息管理</template>
+            <el-menu-item index="/warehouses">仓库管理</el-menu-item>
+            <el-menu-item index="/skus">SKU 管理</el-menu-item>
+          </el-sub-menu>
+
+          <el-sub-menu index="inventory-mgmt">
+            <template #title>库存管理</template>
+            <el-menu-item index="/inventory">库存查询</el-menu-item>
+          </el-sub-menu>
+
+          <el-sub-menu index="inbound-mgmt">
+            <template #title>入库管理</template>
+            <el-menu-item index="/inbound-orders">入库作业</el-menu-item>
+            <el-menu-item index="/inbound-orders/query">入库单查询</el-menu-item>
+          </el-sub-menu>
+
+          <el-sub-menu index="outbound-mgmt">
+            <template #title>出库管理</template>
+            <el-menu-item index="/outbound-orders">出库作业</el-menu-item>
+            <el-menu-item index="/outbound-orders/query">出库查询</el-menu-item>
+          </el-sub-menu>
+
+          <el-sub-menu index="system-mgmt">
+            <template #title>系统管理</template>
+            <el-menu-item index="/operation-logs">日志查询</el-menu-item>
+            <el-menu-item index="/settings">系统设置</el-menu-item>
+          </el-sub-menu>
+        </el-menu>
       </aside>
 
       <main class="layout-content">
@@ -36,6 +64,23 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+const menuGroups = [
+  { index: 'basic-info', paths: ['/warehouses', '/skus'] },
+  { index: 'inventory-mgmt', paths: ['/inventory'] },
+  { index: 'inbound-mgmt', paths: ['/inbound-orders', '/inbound-orders/query'] },
+  { index: 'outbound-mgmt', paths: ['/outbound-orders', '/outbound-orders/query'] },
+  { index: 'system-mgmt', paths: ['/operation-logs', '/settings'] }
+]
+
+const activeGroups = computed(() => {
+  const group = menuGroups.find((item) => item.paths.includes(route.path))
+  return group ? [group.index] : []
+})
 </script>
 
 <style scoped>
@@ -84,33 +129,12 @@
 
 .layout-sidebar {
   width: 220px;
-  padding: 24px 16px;
   background: #1e293b;
   color: #cbd5e1;
 }
 
-.layout-sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.layout-sidebar li {
-  margin-bottom: 16px;
-}
-
-.layout-sidebar a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.layout-sidebar a.router-link-exact-active {
-  color: #fff;
-  font-weight: 600;
-}
-
-.layout-sidebar a:hover {
-  color: #fff;
+.layout-menu {
+  border-right: none;
 }
 
 .layout-content {
@@ -145,17 +169,6 @@
 
   .layout-sidebar {
     width: 100%;
-    padding: 12px 16px;
-  }
-
-  .layout-sidebar ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 16px;
-  }
-
-  .layout-sidebar li {
-    margin-bottom: 0;
   }
 
   .layout-content {
