@@ -22,6 +22,16 @@ const routes = [
         component: () => import('../views/SkusView.vue')
       },
       {
+        path: 'customers',
+        name: 'Customers',
+        component: () => import('../views/CustomersView.vue')
+      },
+      {
+        path: 'suppliers',
+        name: 'Suppliers',
+        component: () => import('../views/SuppliersView.vue')
+      },
+      {
         path: 'inventory',
         name: 'Inventory',
         component: () => import('../views/InventoryView.vue')

@@ -27,8 +27,15 @@
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
-          <el-form-item label="供应商" prop="supplierName">
-            <el-input v-model.trim="orderForm.supplierName" maxlength="128" show-word-limit placeholder="请输入供应商" />
+          <el-form-item label="供应商" prop="supplierId">
+            <el-select v-model="orderForm.supplierId" filterable clearable placeholder="请选择供应商">
+              <el-option
+                v-for="supplier in suppliers"
+                :key="supplier.id"
+                :label="`${supplier.code} - ${supplier.name}`"
+                :value="supplier.id"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
       </el-row>
@@ -92,6 +99,7 @@ const axios = inject('$axios')
 const saving = ref(false)
 const warehouses = ref([])
 const skus = ref([])
+const suppliers = ref([])
 const orders = ref([])
 const orderFormRef = ref()
 
@@ -103,7 +111,7 @@ const initialItem = () => ({
 const orderForm = reactive({
   orderNo: '',
   warehouseId: '',
-  supplierName: '',
+  supplierId: '',
   items: [initialItem()]
 })
 
@@ -123,12 +131,14 @@ const tableColumns = [
 ]
 
 const fetchOptions = async () => {
-  const [warehouseResponse, skuResponse] = await Promise.all([
+  const [warehouseResponse, skuResponse, supplierResponse] = await Promise.all([
     axios.get('/warehouses', { params: { pageNum: 1, pageSize: 100 } }),
-    axios.get('/skus', { params: { pageNum: 1, pageSize: 100 } })
+    axios.get('/skus', { params: { pageNum: 1, pageSize: 100 } }),
+    axios.get('/suppliers', { params: { pageNum: 1, pageSize: 100 } })
   ])
   warehouses.value = normalizePageResponse(warehouseResponse).rows
   skus.value = normalizePageResponse(skuResponse).rows
+  suppliers.value = normalizePageResponse(supplierResponse).rows
 }
 
 const addItem = () => {
@@ -142,7 +152,7 @@ const removeItem = (index) => {
 const resetForm = () => {
   orderForm.orderNo = ''
   orderForm.warehouseId = ''
-  orderForm.supplierName = ''
+  orderForm.supplierId = ''
   orderForm.items = [initialItem()]
   orderFormRef.value?.clearValidate()
 }
@@ -171,7 +181,7 @@ const submitOrder = async () => {
     const response = await axios.post('/inbound-orders', {
       orderNo: orderForm.orderNo,
       warehouseId: orderForm.warehouseId,
-      supplierName: orderForm.supplierName,
+      supplierId: orderForm.supplierId || null,
       items: orderForm.items.map((item) => ({
         skuId: item.skuId,
         quantity: item.quantity

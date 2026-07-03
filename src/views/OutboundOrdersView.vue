@@ -32,8 +32,15 @@
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
-          <el-form-item label="客户" prop="customerName">
-            <el-input v-model.trim="orderForm.customerName" maxlength="128" show-word-limit placeholder="请输入客户名称" />
+          <el-form-item label="客户" prop="customerId">
+            <el-select v-model="orderForm.customerId" filterable clearable placeholder="请选择客户">
+              <el-option
+                v-for="customer in customers"
+                :key="customer.id"
+                :label="`${customer.code} - ${customer.name}`"
+                :value="customer.id"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
       </el-row>
@@ -109,6 +116,7 @@ const axios = inject('$axios')
 const saving = ref(false)
 const inventoryRecords = ref([])
 const skuOptions = ref([])
+const customers = ref([])
 const orders = ref([])
 const orderFormRef = ref()
 
@@ -120,7 +128,7 @@ const initialItem = () => ({
 const orderForm = reactive({
   orderNo: '',
   warehouseId: '',
-  customerName: '',
+  customerId: '',
   items: [initialItem()]
 })
 
@@ -154,8 +162,12 @@ const warehouseOptions = computed(() => {
 })
 
 const fetchOptions = async () => {
-  const response = await axios.get('/inventory', { params: { pageNum: 1, pageSize: 100 } })
-  inventoryRecords.value = normalizePageResponse(response).rows.filter((record) => record.availableQuantity > 0)
+  const [inventoryResponse, customerResponse] = await Promise.all([
+    axios.get('/inventory', { params: { pageNum: 1, pageSize: 100 } }),
+    axios.get('/customers', { params: { pageNum: 1, pageSize: 100 } })
+  ])
+  inventoryRecords.value = normalizePageResponse(inventoryResponse).rows.filter((record) => record.availableQuantity > 0)
+  customers.value = normalizePageResponse(customerResponse).rows
 }
 
 const loadSkuOptions = (warehouseId) => {
@@ -203,7 +215,7 @@ const removeItem = (index) => {
 const resetForm = () => {
   orderForm.orderNo = ''
   orderForm.warehouseId = ''
-  orderForm.customerName = ''
+  orderForm.customerId = ''
   orderForm.items = [initialItem()]
   skuOptions.value = []
   orderFormRef.value?.clearValidate()
@@ -246,7 +258,7 @@ const submitOrder = async () => {
     const response = await axios.post('/outbound-orders', {
       orderNo: orderForm.orderNo,
       warehouseId: orderForm.warehouseId,
-      customerName: orderForm.customerName,
+      customerId: orderForm.customerId || null,
       items: orderForm.items.map((item) => ({
         skuId: item.skuId,
         quantity: item.quantity

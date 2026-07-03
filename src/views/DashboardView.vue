@@ -20,6 +20,8 @@
 const entries = [
   { title: '仓库管理', description: '新增仓库并查询仓库档案', path: '/warehouses' },
   { title: 'SKU 管理', description: '维护 SKU 编码、名称、单位和品类', path: '/skus' },
+  { title: '客户管理', description: '维护客户档案和联系方式', path: '/customers' },
+  { title: '供应商管理', description: '维护供应商档案和联系方式', path: '/suppliers' },
   { title: '库存查询', description: '查看现存量、占用量和可用量', path: '/inventory' },
   { title: '入库作业', description: '创建入库单', path: '/inbound-orders' },
   { title: '入库单查询', description: '查询入库单并执行收货', path: '/inbound-orders/query' },

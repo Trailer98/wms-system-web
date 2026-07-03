@@ -29,6 +29,8 @@
             <template #title>基础信息管理</template>
             <el-menu-item index="/warehouses">仓库管理</el-menu-item>
             <el-menu-item index="/skus">SKU 管理</el-menu-item>
+            <el-menu-item index="/customers">客户管理</el-menu-item>
+            <el-menu-item index="/suppliers">供应商管理</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="inventory-mgmt">
@@ -70,7 +72,7 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const menuGroups = [
-  { index: 'basic-info', paths: ['/warehouses', '/skus'] },
+  { index: 'basic-info', paths: ['/warehouses', '/skus', '/customers', '/suppliers'] },
   { index: 'inventory-mgmt', paths: ['/inventory'] },
   { index: 'inbound-mgmt', paths: ['/inbound-orders', '/inbound-orders/query'] },
   { index: 'outbound-mgmt', paths: ['/outbound-orders', '/outbound-orders/query'] },
