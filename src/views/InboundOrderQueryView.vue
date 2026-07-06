@@ -23,6 +23,9 @@
       empty-text="暂无入库单数据"
       @pagination-change="fetchOrders"
     >
+      <template #orderNo="{ row }">
+        <router-link :to="`/inbound-orders/${row.id}`" class="order-link">{{ row.orderNo }}</router-link>
+      </template>
       <template #status="{ row }">
         <el-tag :type="row.status === 'RECEIVED' ? 'success' : 'warning'" effect="plain">
           {{ orderStatusLabel(row.status, 'inbound') }}
@@ -41,13 +44,22 @@
         >
           收货
         </el-button>
+        <el-button
+          type="danger"
+          link
+          :disabled="row.status !== 'CREATED'"
+          :loading="actionLoadingId === row.id"
+          @click="deleteOrder(row)"
+        >
+          删除
+        </el-button>
       </template>
     </CommonDataTable>
   </section>
 </template>
 
 <script setup>
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
@@ -90,14 +102,14 @@ const queryFields = [
 ]
 
 const tableColumns = [
-  { prop: 'orderNo', label: '入库单号', minWidth: 150 },
+  { label: '入库单号', minWidth: 150, slot: 'orderNo' },
   { label: '状态', width: 110, slot: 'status', align: 'center' },
   { prop: 'warehouseCode', label: '仓库', minWidth: 120 },
   { prop: 'supplierName', label: '供应商', minWidth: 160, showOverflowTooltip: true },
   { label: '明细', minWidth: 260, slot: 'items', showOverflowTooltip: true },
   { label: '收货时间', minWidth: 170, formatter: (row) => formatDateTime(row.receivedAt) },
   { label: '创建时间', minWidth: 170, formatter: (row) => formatDateTime(row.createdAt) },
-  { label: '操作', width: 100, slot: 'actions', fixed: 'right', align: 'center' }
+  { label: '操作', width: 150, slot: 'actions', fixed: 'right', align: 'center' }
 ]
 
 const buildParams = () => {
@@ -151,6 +163,23 @@ const receiveOrder = async (row) => {
   }
 }
 
+const deleteOrder = async (row) => {
+  const confirmed = await ElMessageBox.confirm(`确认删除入库单「${row.orderNo}」吗？`, '提示', { type: 'warning' })
+    .then(() => true)
+    .catch(() => false)
+  if (!confirmed) return
+
+  actionLoadingId.value = row.id
+  try {
+    await axios.delete(`/inbound-orders/${row.id}`)
+    orders.value = orders.value.filter((item) => item.id !== row.id)
+    pagination.total = Math.max(pagination.total - 1, 0)
+    ElMessage.success('入库单已删除')
+  } finally {
+    actionLoadingId.value = null
+  }
+}
+
 const formatItems = (items = []) => {
   if (!items.length) return '-'
   return items.map((item) => `${item.skuCode || item.skuId} x ${item.quantity}`).join('；')
@@ -158,3 +187,14 @@ const formatItems = (items = []) => {
 
 onMounted(fetchOrders)
 </script>
+
+<style scoped>
+.order-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.order-link:hover {
+  text-decoration: underline;
+}
+</style>

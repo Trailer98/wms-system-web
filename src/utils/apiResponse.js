@@ -60,7 +60,9 @@ export const orderStatusLabel = (status, type) => {
   }
   const outbound = {
     CREATED: '已创建',
-    SHIPPED: '已发货'
+    LOCKED: '已锁库',
+    SHIPPED: '已发货',
+    CANCELLED: '已取消'
   }
 
   return (type === 'outbound' ? outbound : inbound)[status] || status || '-'

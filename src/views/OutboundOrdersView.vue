@@ -2,16 +2,29 @@
   <section class="page-shell">
     <div class="page-header">
       <div>
-        <h2>出库作业</h2>
-        <p>创建出库单，创建后请前往「出库单查询」页面执行发货扣减库存。</p>
+        <h2>{{ isEditMode ? '出库单详情' : '出库作业' }}</h2>
+        <p v-if="!isEditMode">创建出库单，创建后请前往「出库单查询」页面执行发货扣减库存。</p>
+        <p v-else>查看并编辑出库单明细，保存后请前往「出库单查询」页面执行锁库、发货。</p>
+      </div>
+      <div v-if="isEditMode" class="header-actions">
+        <el-button type="danger" :disabled="!isDeletable" :loading="deleting" @click="deleteOrder">删除</el-button>
+        <el-button @click="goToQuery">返回查询</el-button>
       </div>
     </div>
 
-    <el-form class="order-form" ref="orderFormRef" :model="orderForm" :rules="orderRules" label-width="90px">
+    <el-alert
+      v-if="isEditMode && !isEditable"
+      class="edit-alert"
+      type="warning"
+      :closable="false"
+      :title="`该出库单当前状态为「${orderStatusLabel(currentOrder?.status, 'outbound')}」，已不可编辑`"
+    />
+
+    <el-form class="order-form" ref="orderFormRef" :model="orderForm" :rules="orderRules" label-width="90px" :disabled="isReadOnly">
       <el-row :gutter="16">
         <el-col :xs="24" :md="8">
           <el-form-item label="出库单号" prop="orderNo">
-            <el-input v-model.trim="orderForm.orderNo" maxlength="64" show-word-limit placeholder="请输入出库单号" />
+            <el-input v-model.trim="orderForm.orderNo" maxlength="64" show-word-limit placeholder="请输入出库单号" :disabled="isEditMode" />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
@@ -20,10 +33,11 @@
               v-model="orderForm.warehouseId"
               filterable
               placeholder="请选择仓库"
+              :disabled="isEditMode"
               @change="handleWarehouseChange"
             >
               <el-option
-                v-for="warehouse in warehouseOptions"
+                v-for="warehouse in activeWarehouseOptions"
                 :key="warehouse.id"
                 :label="`${warehouse.code} - ${warehouse.name}`"
                 :value="warehouse.id"
@@ -33,7 +47,7 @@
         </el-col>
         <el-col :xs="24" :md="8">
           <el-form-item label="客户" prop="customerId">
-            <el-select v-model="orderForm.customerId" filterable clearable placeholder="请选择客户">
+            <el-select v-model="orderForm.customerId" filterable clearable placeholder="请选择客户" :disabled="isReadOnly">
               <el-option
                 v-for="customer in customers"
                 :key="customer.id"
@@ -47,43 +61,61 @@
 
       <div class="items-header">
         <h3>明细</h3>
-        <el-button :disabled="!skuOptions.length" @click="addItem">新增明细</el-button>
+        <el-button :disabled="!activeSkuOptions.length || isReadOnly" @click="addItem">新增明细</el-button>
       </div>
 
-      <div class="order-items">
-        <div v-for="(item, index) in orderForm.items" :key="index" class="order-item-row">
-          <el-select
-            v-model="item.skuId"
-            filterable
-            placeholder="请选择 SKU"
-            :disabled="!orderForm.warehouseId"
-            @change="handleSkuChange(item)"
-          >
-            <el-option
-              v-for="sku in skuOptions"
-              :key="sku.id"
-              :label="`${sku.code} - ${sku.name}（可用 ${sku.availableQuantity}）`"
-              :value="sku.id"
+      <el-table :data="orderForm.items" border class="order-items-table">
+        <el-table-column label="SKU" min-width="260">
+          <template #default="{ row }">
+            <el-select
+              v-model="row.skuId"
+              filterable
+              placeholder="请选择 SKU"
+              :disabled="!orderForm.warehouseId || isReadOnly"
+              @change="handleSkuChange(row)"
+            >
+              <el-option
+                v-for="sku in activeSkuOptions"
+                :key="sku.id"
+                :label="skuOptionLabel(sku)"
+                :value="sku.id"
+              />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="数量" width="180">
+          <template #default="{ row }">
+            <el-input-number
+              v-model="row.quantity"
+              :min="1"
+              :max="itemMaxQuantity(row)"
+              :precision="0"
+              controls-position="right"
+              :disabled="isReadOnly"
             />
-          </el-select>
-          <el-input-number
-            v-model="item.quantity"
-            :min="1"
-            :max="itemMaxQuantity(item)"
-            :precision="0"
-            controls-position="right"
-          />
-          <el-button :disabled="orderForm.items.length === 1" @click="removeItem(index)">删除</el-button>
-        </div>
-      </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="90" align="center">
+          <template #default="{ $index }">
+            <el-button link type="danger" :disabled="orderForm.items.length === 1 || isReadOnly" @click="removeItem($index)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
       <div class="form-actions">
-        <el-button @click="resetForm">重置</el-button>
-        <el-button type="primary" :loading="saving" @click="submitOrder">创建出库单</el-button>
+        <el-button v-if="!isEditMode" @click="resetForm">重置</el-button>
+        <el-button
+          v-if="!isEditMode || isEditable"
+          type="primary"
+          :loading="saving"
+          @click="submitOrder"
+        >
+          {{ isEditMode ? '保存修改' : '创建出库单' }}
+        </el-button>
       </div>
     </el-form>
 
-    <div class="result-section">
+    <div v-if="!isEditMode" class="result-section">
       <div class="section-title">
         <h3>本次创建的出库单</h3>
       </div>
@@ -107,18 +139,30 @@
 </template>
 
 <script setup>
-import { ElMessage } from 'element-plus'
-import { computed, inject, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData } from '../utils/apiResponse'
 
 const axios = inject('$axios')
+const route = useRoute()
+const router = useRouter()
 const saving = ref(false)
+const deleting = ref(false)
 const inventoryRecords = ref([])
 const skuOptions = ref([])
 const customers = ref([])
 const orders = ref([])
 const orderFormRef = ref()
+const currentOrder = ref(null)
+const editWarehouseOption = ref(null)
+const editSkuOptions = ref([])
+
+const isEditMode = computed(() => !!route.params.id)
+const isEditable = computed(() => currentOrder.value?.status === 'CREATED')
+const isReadOnly = computed(() => isEditMode.value && !isEditable.value)
+const isDeletable = computed(() => isEditMode.value && currentOrder.value?.status !== 'SHIPPED')
 
 const initialItem = () => ({
   skuId: '',
@@ -161,6 +205,14 @@ const warehouseOptions = computed(() => {
   return Array.from(map.values())
 })
 
+// Edit mode targets a fixed, already-existing order: the warehouse cannot be changed, and the
+// SKU choices should not be constrained to "currently has available stock" the way the create
+// flow is (that cap is a create-time UX nicety; the authoritative check happens at lock time).
+const activeWarehouseOptions = computed(() => (isEditMode.value ? [editWarehouseOption.value].filter(Boolean) : warehouseOptions.value))
+const activeSkuOptions = computed(() => (isEditMode.value ? editSkuOptions.value : skuOptions.value))
+
+const skuOptionLabel = (sku) => (isEditMode.value ? `${sku.code} - ${sku.name}` : `${sku.code} - ${sku.name}（可用 ${sku.availableQuantity}）`)
+
 const fetchOptions = async () => {
   const [inventoryResponse, customerResponse] = await Promise.all([
     axios.get('/inventory', { params: { pageNum: 1, pageSize: 100 } }),
@@ -182,6 +234,8 @@ const loadSkuOptions = (warehouseId) => {
 }
 
 const itemMaxQuantity = (item) => {
+  if (isEditMode.value) return undefined
+
   const sku = skuOptions.value.find((option) => option.id === item.skuId)
   if (!sku) return undefined
 
@@ -233,6 +287,10 @@ const validateItems = () => {
     return false
   }
 
+  if (isEditMode.value) {
+    return true
+  }
+
   const quantityBySku = new Map()
   orderForm.items.forEach((item) => {
     quantityBySku.set(item.skuId, (quantityBySku.get(item.skuId) || 0) + Number(item.quantity))
@@ -249,27 +307,80 @@ const validateItems = () => {
   return true
 }
 
+const buildItemsPayload = () => orderForm.items.map((item) => ({
+  skuId: item.skuId,
+  quantity: item.quantity
+}))
+
 const submitOrder = async () => {
   const valid = await orderFormRef.value?.validate().catch(() => false)
   if (!valid || !validateItems()) return
 
   saving.value = true
   try {
-    const response = await axios.post('/outbound-orders', {
-      orderNo: orderForm.orderNo,
-      warehouseId: orderForm.warehouseId,
-      customerId: orderForm.customerId || null,
-      items: orderForm.items.map((item) => ({
-        skuId: item.skuId,
-        quantity: item.quantity
-      }))
-    })
-    const order = unwrapApiData(response)
-    orders.value = [order, ...orders.value]
-    ElMessage.success('出库单创建成功')
-    resetForm()
+    if (isEditMode.value) {
+      const response = await axios.put(`/outbound-orders/${route.params.id}`, {
+        customerId: orderForm.customerId || null,
+        items: buildItemsPayload()
+      })
+      currentOrder.value = unwrapApiData(response)
+      ElMessage.success('出库单保存成功')
+    } else {
+      const response = await axios.post('/outbound-orders', {
+        orderNo: orderForm.orderNo,
+        warehouseId: orderForm.warehouseId,
+        customerId: orderForm.customerId || null,
+        items: buildItemsPayload()
+      })
+      const order = unwrapApiData(response)
+      orders.value = [order, ...orders.value]
+      ElMessage.success('出库单创建成功')
+      resetForm()
+    }
   } finally {
     saving.value = false
+  }
+}
+
+const loadOrderForEdit = async (id) => {
+  const response = await axios.get(`/outbound-orders/${id}`)
+  const order = unwrapApiData(response)
+  currentOrder.value = order
+
+  orderForm.orderNo = order.orderNo
+  orderForm.warehouseId = order.warehouseId
+  orderForm.customerId = order.customerId || ''
+  orderForm.items = order.items.map((item) => ({ skuId: item.skuId, quantity: item.quantity }))
+
+  const [warehouseResponse, skuResponse] = await Promise.all([
+    axios.get('/warehouses', { params: { pageNum: 1, pageSize: 100 } }),
+    axios.get('/skus', { params: { pageNum: 1, pageSize: 100 } })
+  ])
+  const warehouseList = normalizePageResponse(warehouseResponse).rows
+  editWarehouseOption.value = warehouseList.find((warehouse) => warehouse.id === order.warehouseId)
+    || { id: order.warehouseId, code: order.warehouseCode, name: order.warehouseCode }
+  editSkuOptions.value = normalizePageResponse(skuResponse).rows.map((sku) => ({ id: sku.id, code: sku.code, name: sku.name }))
+}
+
+const goToQuery = () => {
+  router.push('/outbound-orders/query')
+}
+
+const deleteOrder = async () => {
+  const confirmed = await ElMessageBox.confirm(
+    `确认删除出库单「${orderForm.orderNo}」吗？${currentOrder.value?.status === 'LOCKED' ? '已锁定的库存将会释放。' : ''}`,
+    '提示',
+    { type: 'warning' }
+  ).then(() => true).catch(() => false)
+  if (!confirmed) return
+
+  deleting.value = true
+  try {
+    await axios.delete(`/outbound-orders/${route.params.id}`)
+    ElMessage.success('出库单已删除')
+    goToQuery()
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -278,5 +389,35 @@ const formatItems = (items = []) => {
   return items.map((item) => `${item.skuCode || item.skuId} x ${item.quantity}`).join('；')
 }
 
-onMounted(fetchOptions)
+watch(() => route.params.id, (id) => {
+  if (id) {
+    loadOrderForEdit(id)
+  }
+})
+
+onMounted(async () => {
+  await fetchOptions()
+  if (isEditMode.value) {
+    await loadOrderForEdit(route.params.id)
+  }
+})
 </script>
+
+<style scoped>
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.edit-alert {
+  margin-bottom: 16px;
+}
+
+.order-items-table {
+  margin-top: 14px;
+}
+
+.order-items-table :deep(.el-select) {
+  width: 100%;
+}
+</style>

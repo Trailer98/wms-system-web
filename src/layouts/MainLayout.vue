@@ -16,7 +16,7 @@
       <aside class="layout-sidebar">
         <el-menu
           router
-          :default-active="route.path"
+          :default-active="activeMenuPath"
           :default-openeds="activeGroups"
           background-color="#1e293b"
           text-color="#cbd5e1"
@@ -28,6 +28,8 @@
           <el-sub-menu index="basic-info">
             <template #title>基础信息管理</template>
             <el-menu-item index="/warehouses">仓库管理</el-menu-item>
+            <el-menu-item index="/warehouse-areas">库区管理</el-menu-item>
+            <el-menu-item index="/warehouse-locations">库位管理</el-menu-item>
             <el-menu-item index="/skus">SKU 管理</el-menu-item>
             <el-menu-item index="/customers">客户管理</el-menu-item>
             <el-menu-item index="/suppliers">供应商管理</el-menu-item>
@@ -36,6 +38,7 @@
           <el-sub-menu index="inventory-mgmt">
             <template #title>库存管理</template>
             <el-menu-item index="/inventory">库存查询</el-menu-item>
+            <el-menu-item index="/inventory/transactions">库存流水</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="inbound-mgmt">
@@ -53,6 +56,7 @@
           <el-sub-menu index="system-mgmt">
             <template #title>系统管理</template>
             <el-menu-item index="/operation-logs">日志查询</el-menu-item>
+            <el-menu-item index="/wms-exceptions">异常事件查询</el-menu-item>
             <el-menu-item index="/settings">系统设置</el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -72,15 +76,21 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const menuGroups = [
-  { index: 'basic-info', paths: ['/warehouses', '/skus', '/customers', '/suppliers'] },
-  { index: 'inventory-mgmt', paths: ['/inventory'] },
+  { index: 'basic-info', paths: ['/warehouses', '/warehouse-areas', '/warehouse-locations', '/skus', '/customers', '/suppliers'] },
+  { index: 'inventory-mgmt', paths: ['/inventory', '/inventory/transactions'] },
   { index: 'inbound-mgmt', paths: ['/inbound-orders', '/inbound-orders/query'] },
   { index: 'outbound-mgmt', paths: ['/outbound-orders', '/outbound-orders/query'] },
-  { index: 'system-mgmt', paths: ['/operation-logs', '/settings'] }
+  { index: 'system-mgmt', paths: ['/operation-logs', '/wms-exceptions', '/settings'] }
 ]
 
+const activeMenuPath = computed(() => {
+  if (/^\/inbound-orders\/\d+$/.test(route.path)) return '/inbound-orders'
+  if (/^\/outbound-orders\/\d+$/.test(route.path)) return '/outbound-orders'
+  return route.path
+})
+
 const activeGroups = computed(() => {
-  const group = menuGroups.find((item) => item.paths.includes(route.path))
+  const group = menuGroups.find((item) => item.paths.includes(activeMenuPath.value))
   return group ? [group.index] : []
 })
 </script>

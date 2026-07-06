@@ -32,9 +32,24 @@ const routes = [
         component: () => import('../views/SuppliersView.vue')
       },
       {
+        path: 'warehouse-areas',
+        name: 'WarehouseAreas',
+        component: () => import('../views/WarehouseAreasView.vue')
+      },
+      {
+        path: 'warehouse-locations',
+        name: 'WarehouseLocations',
+        component: () => import('../views/WarehouseLocationsView.vue')
+      },
+      {
         path: 'inventory',
         name: 'Inventory',
         component: () => import('../views/InventoryView.vue')
+      },
+      {
+        path: 'inventory/transactions',
+        name: 'InventoryTransactions',
+        component: () => import('../views/InventoryTransactionsView.vue')
       },
       {
         path: 'inbound-orders',
@@ -47,6 +62,11 @@ const routes = [
         component: () => import('../views/InboundOrderQueryView.vue')
       },
       {
+        path: 'inbound-orders/:id',
+        name: 'InboundOrderDetail',
+        component: () => import('../views/InboundOrdersView.vue')
+      },
+      {
         path: 'outbound-orders',
         name: 'OutboundOrders',
         component: () => import('../views/OutboundOrdersView.vue')
@@ -57,6 +77,11 @@ const routes = [
         component: () => import('../views/OutboundOrderQueryView.vue')
       },
       {
+        path: 'outbound-orders/:id',
+        name: 'OutboundOrderDetail',
+        component: () => import('../views/OutboundOrdersView.vue')
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/SettingsView.vue')
@@ -65,6 +90,11 @@ const routes = [
         path: 'operation-logs',
         name: 'OperationLogs',
         component: () => import('../views/OperationLogsView.vue')
+      },
+      {
+        path: 'wms-exceptions',
+        name: 'WmsExceptions',
+        component: () => import('../views/WmsExceptionEventsView.vue')
       },
       {
         path: '/:pathMatch(.*)*',
