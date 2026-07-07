@@ -4,12 +4,16 @@
       <div class="logo">WMS System</div>
       <nav class="top-nav">
         <router-link to="/">首页</router-link>
-        <router-link to="/warehouses">仓库</router-link>
-        <router-link to="/skus">SKU</router-link>
-        <router-link to="/inventory">库存</router-link>
+        <router-link v-if="authStore.hasPermission('warehouse:view')" to="/warehouses">仓库</router-link>
+        <router-link v-if="authStore.hasPermission('sku:view')" to="/skus">SKU</router-link>
+        <router-link v-if="authStore.hasPermission('inventory:view')" to="/inventory">库存</router-link>
         <router-link to="/operation-logs">日志查询</router-link>
         <router-link to="/settings">设置</router-link>
       </nav>
+      <div class="user-area">
+        <span class="user-name">{{ authStore.user?.realName || authStore.user?.username }}</span>
+        <el-button text @click="handleLogout">退出登录</el-button>
+      </div>
     </header>
 
     <div class="layout-body">
@@ -27,36 +31,38 @@
 
           <el-sub-menu index="basic-info">
             <template #title>基础信息管理</template>
-            <el-menu-item index="/warehouses">仓库管理</el-menu-item>
-            <el-menu-item index="/warehouse-areas">库区管理</el-menu-item>
-            <el-menu-item index="/warehouse-locations">库位管理</el-menu-item>
-            <el-menu-item index="/skus">SKU 管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('warehouse:view')" index="/warehouses">仓库管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('area:view')" index="/warehouse-areas">库区管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('location:view')" index="/warehouse-locations">库位管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('sku:view')" index="/skus">SKU 管理</el-menu-item>
             <el-menu-item index="/customers">客户管理</el-menu-item>
             <el-menu-item index="/suppliers">供应商管理</el-menu-item>
           </el-sub-menu>
 
-          <el-sub-menu index="inventory-mgmt">
+          <el-sub-menu index="inventory-mgmt" v-if="showInventoryGroup">
             <template #title>库存管理</template>
-            <el-menu-item index="/inventory">库存查询</el-menu-item>
-            <el-menu-item index="/inventory/transactions">库存流水</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('inventory:view')" index="/inventory">库存查询</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('inventory:transaction:view')" index="/inventory/transactions">库存流水</el-menu-item>
           </el-sub-menu>
 
-          <el-sub-menu index="inbound-mgmt">
+          <el-sub-menu index="inbound-mgmt" v-if="showInboundGroup">
             <template #title>入库管理</template>
-            <el-menu-item index="/inbound-orders">入库作业</el-menu-item>
-            <el-menu-item index="/inbound-orders/query">入库单查询</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('inbound:create')" index="/inbound-orders">入库作业</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('inbound:view')" index="/inbound-orders/query">入库单查询</el-menu-item>
           </el-sub-menu>
 
-          <el-sub-menu index="outbound-mgmt">
+          <el-sub-menu index="outbound-mgmt" v-if="showOutboundGroup">
             <template #title>出库管理</template>
-            <el-menu-item index="/outbound-orders">出库作业</el-menu-item>
-            <el-menu-item index="/outbound-orders/query">出库查询</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('outbound:create')" index="/outbound-orders">出库作业</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('outbound:view')" index="/outbound-orders/query">出库查询</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="system-mgmt">
             <template #title>系统管理</template>
             <el-menu-item index="/operation-logs">日志查询</el-menu-item>
-            <el-menu-item index="/wms-exceptions">异常事件查询</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('exception:view')" index="/wms-exceptions">异常事件查询</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('user:view')" index="/users">用户管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('role:view')" index="/roles">角色管理</el-menu-item>
             <el-menu-item index="/settings">系统设置</el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -71,16 +77,19 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const menuGroups = [
   { index: 'basic-info', paths: ['/warehouses', '/warehouse-areas', '/warehouse-locations', '/skus', '/customers', '/suppliers'] },
   { index: 'inventory-mgmt', paths: ['/inventory', '/inventory/transactions'] },
   { index: 'inbound-mgmt', paths: ['/inbound-orders', '/inbound-orders/query'] },
   { index: 'outbound-mgmt', paths: ['/outbound-orders', '/outbound-orders/query'] },
-  { index: 'system-mgmt', paths: ['/operation-logs', '/wms-exceptions', '/settings'] }
+  { index: 'system-mgmt', paths: ['/operation-logs', '/wms-exceptions', '/settings', '/users', '/roles'] }
 ]
 
 const activeMenuPath = computed(() => {
@@ -93,6 +102,21 @@ const activeGroups = computed(() => {
   const group = menuGroups.find((item) => item.paths.includes(activeMenuPath.value))
   return group ? [group.index] : []
 })
+
+// 基础信息管理 always shows: Customer/Supplier have no dedicated permission codes in this
+// rollout so those two items are unconditionally visible. The other groups are fully
+// permission-gated per item, so hide the group itself once nothing inside it would render.
+const showInventoryGroup = computed(() =>
+  authStore.hasPermission('inventory:view') || authStore.hasPermission('inventory:transaction:view'))
+const showInboundGroup = computed(() =>
+  authStore.hasPermission('inbound:create') || authStore.hasPermission('inbound:view'))
+const showOutboundGroup = computed(() =>
+  authStore.hasPermission('outbound:create') || authStore.hasPermission('outbound:view'))
+
+const handleLogout = async () => {
+  authStore.clear()
+  router.replace({ name: 'Login' })
+}
 </script>
 
 <style scoped>
@@ -131,6 +155,26 @@ const activeGroups = computed(() => {
 }
 
 .top-nav a:hover {
+  color: #fff;
+}
+
+.user-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.user-name {
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.user-area :deep(.el-button) {
+  color: #cbd5e1;
+}
+
+.user-area :deep(.el-button:hover) {
   color: #fff;
 }
 

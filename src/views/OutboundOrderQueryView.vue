@@ -37,7 +37,7 @@
       <template #actions="{ row }">
         <el-button type="primary" link @click="openAllocationDialog(row)">分配明细</el-button>
         <el-button
-          v-if="row.status === 'CREATED'"
+          v-if="row.status === 'CREATED' && authStore.hasPermission('outbound:lock')"
           type="primary"
           link
           :loading="actionLoadingId === row.id"
@@ -46,7 +46,7 @@
           锁定库存
         </el-button>
         <el-button
-          v-if="row.status === 'LOCKED'"
+          v-if="row.status === 'LOCKED' && authStore.hasPermission('outbound:confirm')"
           type="success"
           link
           :loading="actionLoadingId === row.id"
@@ -55,7 +55,7 @@
           确认发货
         </el-button>
         <el-button
-          v-if="row.status === 'CREATED' || row.status === 'LOCKED'"
+          v-if="(row.status === 'CREATED' || row.status === 'LOCKED') && authStore.hasPermission('outbound:cancel')"
           type="danger"
           link
           :loading="actionLoadingId === row.id"
@@ -64,7 +64,7 @@
           取消
         </el-button>
         <el-button
-          v-if="row.status !== 'SHIPPED'"
+          v-if="row.status !== 'SHIPPED' && authStore.hasPermission('outbound:cancel')"
           type="danger"
           link
           :loading="actionLoadingId === row.id"
@@ -95,9 +95,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { useAuthStore } from '../stores/auth'
 import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData } from '../utils/apiResponse'
 
 const axios = inject('$axios')
+const authStore = useAuthStore()
 const loading = ref(false)
 const actionLoadingId = ref(null)
 const orders = ref([])

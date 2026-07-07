@@ -34,7 +34,7 @@
       <template #actions="{ row }">
         <el-button type="primary" link @click="openDetail(row)">详情</el-button>
         <el-button
-          v-if="row.status !== 'HANDLED'"
+          v-if="row.status !== 'HANDLED' && authStore.hasPermission('exception:handle')"
           type="success"
           link
           :loading="actionLoadingId === row.id"
@@ -68,9 +68,11 @@ import { ElMessage } from 'element-plus'
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { useAuthStore } from '../stores/auth'
 import { formatDateTime, normalizePageResponse, unwrapApiData } from '../utils/apiResponse'
 
 const axios = inject('$axios')
+const authStore = useAuthStore()
 const loading = ref(false)
 const actionLoadingId = ref(null)
 const events = ref([])

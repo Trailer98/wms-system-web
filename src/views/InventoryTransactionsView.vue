@@ -26,6 +26,9 @@
       <template #type="{ row }">
         <el-tag effect="plain">{{ movementTypeLabel(row.type) }}</el-tag>
       </template>
+      <template #operationType="{ row }">
+        <el-tag type="success" effect="plain">{{ operationTypeLabel(row.operationType) }}</el-tag>
+      </template>
       <template #actions="{ row }">
         <el-button type="primary" link @click="openDetail(row)">详情</el-button>
       </template>
@@ -34,6 +37,7 @@
     <el-dialog v-model="detailVisible" title="库存流水详情" width="560px">
       <el-descriptions v-if="activeMovement" :column="2" border>
         <el-descriptions-item label="业务类型">{{ movementTypeLabel(activeMovement.type) }}</el-descriptions-item>
+        <el-descriptions-item label="操作类型">{{ operationTypeLabel(activeMovement.operationType) }}</el-descriptions-item>
         <el-descriptions-item label="业务单号">{{ activeMovement.businessNo }}</el-descriptions-item>
         <el-descriptions-item label="SKU">{{ activeMovement.skuCode }} {{ activeMovement.skuName }}</el-descriptions-item>
         <el-descriptions-item label="仓库">{{ activeMovement.warehouseCode }}</el-descriptions-item>
@@ -76,12 +80,29 @@ const movementTypeOptions = [
   { label: '库存调整', value: 'ADJUSTMENT' }
 ]
 
+const operationTypeOptions = [
+  { label: '现存量增加', value: 'ON_HAND_INCREASE' },
+  { label: '现存量减少', value: 'ON_HAND_DECREASE' },
+  { label: '锁定库存', value: 'STOCK_LOCK' },
+  { label: '释放锁定库存', value: 'STOCK_UNLOCK' },
+  { label: '冻结库存', value: 'STOCK_FREEZE' },
+  { label: '解冻库存', value: 'STOCK_UNFREEZE' },
+  { label: '调整增加', value: 'ADJUST_INCREASE' },
+  { label: '调整减少', value: 'ADJUST_DECREASE' },
+  { label: '盘盈', value: 'COUNT_PROFIT' },
+  { label: '盘亏', value: 'COUNT_LOSS' },
+  { label: '移库转出', value: 'TRANSFER_OUT' },
+  { label: '移库转入', value: 'TRANSFER_IN' },
+  { label: '未知', value: 'UNKNOWN' }
+]
+
 const queryForm = reactive({
   skuId: '',
   warehouseId: '',
   areaId: '',
   locationId: '',
   type: '',
+  operationType: '',
   businessNo: '',
   dateRange: []
 })
@@ -122,6 +143,7 @@ const handleAreaChange = async () => {
 const queryFields = computed(() => [
   { prop: 'businessNo', label: '业务单号', type: 'input', placeholder: '请输入业务单号', trim: true },
   { prop: 'type', label: '业务类型', type: 'select', placeholder: '请选择业务类型', options: movementTypeOptions },
+  { prop: 'operationType', label: '操作类型', type: 'select', placeholder: '请选择操作类型', options: operationTypeOptions },
   { prop: 'skuId', label: 'SKU', type: 'select', placeholder: '请选择 SKU', options: skuOptions.value, attrs: { filterable: true } },
   { prop: 'warehouseId', label: '仓库', type: 'select', placeholder: '请选择仓库', options: warehouseOptions.value, attrs: { filterable: true, onChange: handleWarehouseChange } },
   { prop: 'areaId', label: '库区', type: 'select', placeholder: '请先选择仓库', options: areaOptions.value, attrs: { filterable: true, disabled: !areaOptions.value.length, onChange: handleAreaChange } },
@@ -131,6 +153,7 @@ const queryFields = computed(() => [
 
 const tableColumns = [
   { label: '业务类型', width: 90, slot: 'type', align: 'center' },
+  { label: '操作类型', width: 120, slot: 'operationType', align: 'center' },
   { prop: 'businessNo', label: '业务单号', minWidth: 140 },
   { prop: 'skuCode', label: 'SKU', minWidth: 130, formatter: (row) => `${row.skuCode || ''} ${row.skuName || ''}`.trim() || '-' },
   { prop: 'warehouseCode', label: '仓库', minWidth: 100 },
@@ -144,6 +167,7 @@ const tableColumns = [
 ]
 
 const movementTypeLabel = (value) => movementTypeOptions.find((option) => option.value === value)?.label || value || '-'
+const operationTypeLabel = (value) => operationTypeOptions.find((option) => option.value === value)?.label || value || '-'
 
 const fetchOptions = async () => {
   const [warehouseResponse, skuResponse] = await Promise.all([
@@ -164,6 +188,7 @@ const buildParams = () => {
   if (queryForm.areaId) params.areaId = queryForm.areaId
   if (queryForm.locationId) params.locationId = queryForm.locationId
   if (queryForm.type) params.type = queryForm.type
+  if (queryForm.operationType) params.operationType = queryForm.operationType
   if (queryForm.businessNo) params.businessNo = queryForm.businessNo
   if (queryForm.dateRange?.length === 2) {
     params.startTime = queryForm.dateRange[0]
@@ -200,6 +225,7 @@ const handleReset = () => {
   queryForm.areaId = ''
   queryForm.locationId = ''
   queryForm.type = ''
+  queryForm.operationType = ''
   queryForm.businessNo = ''
   queryForm.dateRange = []
   areaOptions.value = []

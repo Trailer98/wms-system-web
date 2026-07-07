@@ -36,6 +36,7 @@
       </template>
       <template #actions="{ row }">
         <el-button
+          v-if="authStore.hasPermission('inbound:complete')"
           type="primary"
           link
           :disabled="row.status !== 'CREATED'"
@@ -45,6 +46,7 @@
           收货
         </el-button>
         <el-button
+          v-if="authStore.hasPermission('inbound:cancel')"
           type="danger"
           link
           :disabled="row.status !== 'CREATED'"
@@ -63,9 +65,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { useAuthStore } from '../stores/auth'
 import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData } from '../utils/apiResponse'
 
 const axios = inject('$axios')
+const authStore = useAuthStore()
 const loading = ref(false)
 const actionLoadingId = ref(null)
 const orders = ref([])
