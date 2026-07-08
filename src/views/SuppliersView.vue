@@ -5,7 +5,7 @@
         <h2>供应商管理</h2>
         <p>维护供应商基础资料，支持按供应商编码和名称查询。</p>
       </div>
-      <el-button type="primary" @click="openCreateDialog">新增供应商</el-button>
+      <el-button v-if="authStore.hasPermission('supplier:create')" type="primary" @click="openCreateDialog">新增供应商</el-button>
     </div>
 
     <CommonQueryForm
@@ -62,9 +62,11 @@ import { ElMessage } from 'element-plus'
 import { inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { useAuthStore } from '../stores/auth'
 import { boolLabel, formatDateTime, normalizePageResponse } from '../utils/apiResponse'
 
 const axios = inject('$axios')
+const authStore = useAuthStore()
 const loading = ref(false)
 const saving = ref(false)
 const suppliers = ref([])

@@ -32,12 +32,14 @@ const routes = [
       {
         path: 'customers',
         name: 'Customers',
-        component: () => import('../views/CustomersView.vue')
+        component: () => import('../views/CustomersView.vue'),
+        meta: { permission: 'customer:view' }
       },
       {
         path: 'suppliers',
         name: 'Suppliers',
-        component: () => import('../views/SuppliersView.vue')
+        component: () => import('../views/SuppliersView.vue'),
+        meta: { permission: 'supplier:view' }
       },
       {
         path: 'warehouse-areas',
@@ -62,6 +64,18 @@ const routes = [
         name: 'InventoryTransactions',
         component: () => import('../views/InventoryTransactionsView.vue'),
         meta: { permission: 'inventory:transaction:view' }
+      },
+      {
+        path: 'stock-adjust-orders',
+        name: 'StockAdjustOrders',
+        component: () => import('../views/StockAdjustOrdersView.vue'),
+        meta: { permission: 'stock-adjust:view' }
+      },
+      {
+        path: 'stock-count-tasks',
+        name: 'StockCountTasks',
+        component: () => import('../views/StockCountTasksView.vue'),
+        meta: { permission: 'stock-count:view' }
       },
       {
         path: 'inbound-orders',
@@ -119,7 +133,8 @@ const routes = [
       {
         path: 'operation-logs',
         name: 'OperationLogs',
-        component: () => import('../views/OperationLogsView.vue')
+        component: () => import('../views/OperationLogsView.vue'),
+        meta: { permission: 'operation-log:view' }
       },
       {
         path: 'wms-exceptions',

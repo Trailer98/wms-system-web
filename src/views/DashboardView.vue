@@ -27,14 +27,16 @@ const authStore = useAuthStore()
 const allEntries = [
   { title: '仓库管理', description: '新增仓库并查询仓库档案', path: '/warehouses', permission: 'warehouse:view' },
   { title: 'SKU 管理', description: '维护 SKU 编码、名称、单位和品类', path: '/skus', permission: 'sku:view' },
-  { title: '客户管理', description: '维护客户档案和联系方式', path: '/customers' },
-  { title: '供应商管理', description: '维护供应商档案和联系方式', path: '/suppliers' },
+  { title: '客户管理', description: '维护客户档案和联系方式', path: '/customers', permission: 'customer:view' },
+  { title: '供应商管理', description: '维护供应商档案和联系方式', path: '/suppliers', permission: 'supplier:view' },
   { title: '库存查询', description: '查看现存量、占用量和可用量', path: '/inventory', permission: 'inventory:view' },
+  { title: '库存调整', description: '人工修正库存现存量', path: '/stock-adjust-orders', permission: 'stock-adjust:view' },
+  { title: '库存盘点', description: '核对账面库存与实际库存', path: '/stock-count-tasks', permission: 'stock-count:view' },
   { title: '入库作业', description: '创建入库单', path: '/inbound-orders', permission: 'inbound:create' },
   { title: '入库单查询', description: '查询入库单并执行收货', path: '/inbound-orders/query', permission: 'inbound:view' },
   { title: '出库作业', description: '创建出库单', path: '/outbound-orders', permission: 'outbound:create' },
   { title: '出库单查询', description: '查询出库单并执行发货', path: '/outbound-orders/query', permission: 'outbound:view' },
-  { title: '日志查询', description: '追踪业务操作记录', path: '/operation-logs' }
+  { title: '日志查询', description: '追踪业务操作记录', path: '/operation-logs', permission: 'operation-log:view' }
 ]
 
 const entries = computed(() => allEntries.filter((entry) => !entry.permission || authStore.hasPermission(entry.permission)))

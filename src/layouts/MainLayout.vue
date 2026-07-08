@@ -7,7 +7,7 @@
         <router-link v-if="authStore.hasPermission('warehouse:view')" to="/warehouses">仓库</router-link>
         <router-link v-if="authStore.hasPermission('sku:view')" to="/skus">SKU</router-link>
         <router-link v-if="authStore.hasPermission('inventory:view')" to="/inventory">库存</router-link>
-        <router-link to="/operation-logs">日志查询</router-link>
+        <router-link v-if="authStore.hasPermission('operation-log:view')" to="/operation-logs">日志查询</router-link>
         <router-link to="/settings">设置</router-link>
       </nav>
       <div class="user-area">
@@ -35,14 +35,16 @@
             <el-menu-item v-if="authStore.hasPermission('area:view')" index="/warehouse-areas">库区管理</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('location:view')" index="/warehouse-locations">库位管理</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('sku:view')" index="/skus">SKU 管理</el-menu-item>
-            <el-menu-item index="/customers">客户管理</el-menu-item>
-            <el-menu-item index="/suppliers">供应商管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('customer:view')" index="/customers">客户管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('supplier:view')" index="/suppliers">供应商管理</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="inventory-mgmt" v-if="showInventoryGroup">
             <template #title>库存管理</template>
             <el-menu-item v-if="authStore.hasPermission('inventory:view')" index="/inventory">库存查询</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('inventory:transaction:view')" index="/inventory/transactions">库存流水</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('stock-adjust:view')" index="/stock-adjust-orders">库存调整</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('stock-count:view')" index="/stock-count-tasks">库存盘点</el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="inbound-mgmt" v-if="showInboundGroup">
@@ -59,7 +61,7 @@
 
           <el-sub-menu index="system-mgmt">
             <template #title>系统管理</template>
-            <el-menu-item index="/operation-logs">日志查询</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('operation-log:view')" index="/operation-logs">日志查询</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('exception:view')" index="/wms-exceptions">异常事件查询</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('user:view')" index="/users">用户管理</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('role:view')" index="/roles">角色管理</el-menu-item>
@@ -86,7 +88,7 @@ const authStore = useAuthStore()
 
 const menuGroups = [
   { index: 'basic-info', paths: ['/warehouses', '/warehouse-areas', '/warehouse-locations', '/skus', '/customers', '/suppliers'] },
-  { index: 'inventory-mgmt', paths: ['/inventory', '/inventory/transactions'] },
+  { index: 'inventory-mgmt', paths: ['/inventory', '/inventory/transactions', '/stock-adjust-orders', '/stock-count-tasks'] },
   { index: 'inbound-mgmt', paths: ['/inbound-orders', '/inbound-orders/query'] },
   { index: 'outbound-mgmt', paths: ['/outbound-orders', '/outbound-orders/query'] },
   { index: 'system-mgmt', paths: ['/operation-logs', '/wms-exceptions', '/settings', '/users', '/roles'] }
@@ -103,11 +105,12 @@ const activeGroups = computed(() => {
   return group ? [group.index] : []
 })
 
-// 基础信息管理 always shows: Customer/Supplier have no dedicated permission codes in this
-// rollout so those two items are unconditionally visible. The other groups are fully
-// permission-gated per item, so hide the group itself once nothing inside it would render.
+// 基础信息管理 always shows: at least one item (warehouse/area/location/sku) is visible to every
+// seeded role. The other groups are fully permission-gated per item, so hide the group itself
+// once nothing inside it would render.
 const showInventoryGroup = computed(() =>
-  authStore.hasPermission('inventory:view') || authStore.hasPermission('inventory:transaction:view'))
+  authStore.hasPermission('inventory:view') || authStore.hasPermission('inventory:transaction:view') ||
+  authStore.hasPermission('stock-adjust:view') || authStore.hasPermission('stock-count:view'))
 const showInboundGroup = computed(() =>
   authStore.hasPermission('inbound:create') || authStore.hasPermission('inbound:view'))
 const showOutboundGroup = computed(() =>

@@ -77,23 +77,24 @@ const movementTypeOptions = [
   { label: '出库', value: 'OUTBOUND' },
   { label: '锁库', value: 'LOCK' },
   { label: '解锁', value: 'UNLOCK' },
-  { label: '库存调整', value: 'ADJUSTMENT' }
+  { label: '库存调整', value: 'ADJUSTMENT' },
+  { label: '库存盘点', value: 'COUNT' }
 ]
 
 const operationTypeOptions = [
-  { label: '现存量增加', value: 'ON_HAND_INCREASE' },
-  { label: '现存量减少', value: 'ON_HAND_DECREASE' },
-  { label: '锁定库存', value: 'STOCK_LOCK' },
-  { label: '释放锁定库存', value: 'STOCK_UNLOCK' },
-  { label: '冻结库存', value: 'STOCK_FREEZE' },
-  { label: '解冻库存', value: 'STOCK_UNFREEZE' },
-  { label: '调整增加', value: 'ADJUST_INCREASE' },
-  { label: '调整减少', value: 'ADJUST_DECREASE' },
-  { label: '盘盈', value: 'COUNT_PROFIT' },
-  { label: '盘亏', value: 'COUNT_LOSS' },
+  { label: '入库收货', value: 'INBOUND_RECEIVE' },
+  { label: '出库锁库', value: 'OUTBOUND_LOCK' },
+  { label: '出库取消解锁', value: 'OUTBOUND_CANCEL_UNLOCK' },
+  { label: '出库发货', value: 'OUTBOUND_SHIP' },
+  { label: '库存调整增加', value: 'STOCK_ADJUST_INCREASE' },
+  { label: '库存调整减少', value: 'STOCK_ADJUST_DECREASE' },
+  { label: '库存盘点盘盈', value: 'STOCK_COUNT_PROFIT' },
+  { label: '库存盘点盘亏', value: 'STOCK_COUNT_LOSS' },
+  { label: '库存冻结', value: 'STOCK_FREEZE' },
+  { label: '库存解冻', value: 'STOCK_UNFREEZE' },
   { label: '移库转出', value: 'TRANSFER_OUT' },
   { label: '移库转入', value: 'TRANSFER_IN' },
-  { label: '未知', value: 'UNKNOWN' }
+  { label: '未知操作', value: 'UNKNOWN' }
 ]
 
 const queryForm = reactive({

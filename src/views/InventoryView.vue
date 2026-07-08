@@ -33,17 +33,31 @@
           {{ row.availableQuantity }}
         </el-tag>
       </template>
+      <template #actions="{ row }">
+        <el-button
+          v-if="authStore.hasPermission('stock-adjust:create')"
+          type="primary"
+          link
+          @click="goToAdjust(row)"
+        >
+          调整
+        </el-button>
+      </template>
     </CommonDataTable>
   </section>
 </template>
 
 <script setup>
 import { computed, inject, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { useAuthStore } from '../stores/auth'
 import { formatDateTime, normalizePageResponse } from '../utils/apiResponse'
 
 const axios = inject('$axios')
+const router = useRouter()
+const authStore = useAuthStore()
 const loading = ref(false)
 const inventory = ref([])
 const warehouses = ref([])
@@ -134,8 +148,13 @@ const tableColumns = [
   { prop: 'reservedQuantity', label: '锁定量', width: 100, align: 'right' },
   { prop: 'frozenQuantity', label: '冻结量', width: 100, align: 'right' },
   { label: '可用量', width: 100, slot: 'availableQuantity', align: 'right' },
-  { label: '更新时间', minWidth: 170, formatter: (row) => formatDateTime(row.updatedAt) }
+  { label: '更新时间', minWidth: 170, formatter: (row) => formatDateTime(row.updatedAt) },
+  { label: '操作', width: 90, slot: 'actions', fixed: 'right', align: 'center' }
 ]
+
+const goToAdjust = (row) => {
+  router.push({ path: '/stock-adjust-orders', query: { inventoryId: row.id } })
+}
 
 const inventoryStatusLabel = (value) => inventoryStatusOptions.find((option) => option.value === value)?.label || value || '-'
 

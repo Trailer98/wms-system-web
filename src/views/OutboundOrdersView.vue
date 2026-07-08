@@ -24,7 +24,7 @@
       <el-row :gutter="16">
         <el-col :xs="24" :md="8">
           <el-form-item label="出库单号" prop="orderNo">
-            <el-input v-model.trim="orderForm.orderNo" maxlength="64" show-word-limit placeholder="请输入出库单号" :disabled="isEditMode" />
+            <el-input v-model.trim="orderForm.orderNo" maxlength="64" show-word-limit placeholder="保存时由系统自动生成" disabled />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
@@ -177,7 +177,6 @@ const orderForm = reactive({
 })
 
 const orderRules = {
-  orderNo: [{ required: true, message: '请输入出库单号', trigger: 'blur' }],
   warehouseId: [{ required: true, message: '请选择仓库', trigger: 'change' }]
 }
 
@@ -327,14 +326,13 @@ const submitOrder = async () => {
       ElMessage.success('出库单保存成功')
     } else {
       const response = await axios.post('/outbound-orders', {
-        orderNo: orderForm.orderNo,
         warehouseId: orderForm.warehouseId,
         customerId: orderForm.customerId || null,
         items: buildItemsPayload()
       })
       const order = unwrapApiData(response)
       orders.value = [order, ...orders.value]
-      ElMessage.success('出库单创建成功')
+      ElMessage.success(`创建成功，出库单号：${order.orderNo}`)
       resetForm()
     }
   } finally {
