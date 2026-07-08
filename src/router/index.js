@@ -131,6 +131,12 @@ const routes = [
         component: () => import('../views/SettingsView.vue')
       },
       {
+        path: 'sys-dicts',
+        name: 'SysDicts',
+        component: () => import('../views/SysDictView.vue'),
+        meta: { permission: 'sys-dict:view' }
+      },
+      {
         path: 'operation-logs',
         name: 'OperationLogs',
         component: () => import('../views/OperationLogsView.vue'),

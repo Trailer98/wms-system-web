@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2>库存调整</h2>
-        <p>基于现有库存记录人工修正现存量，新增调整单后需提交、确认才会真正变更库存。</p>
+        <p>基于现有库存记录人工修正现存量或在正常区/异常区之间转移，新增调整单后需提交、确认才会真正变更库存。</p>
       </div>
       <el-button v-if="authStore.hasPermission('stock-adjust:create')" type="primary" @click="openCreateDialog">新增调整单</el-button>
     </div>
@@ -37,7 +37,7 @@
       </template>
     </CommonDataTable>
 
-    <el-dialog v-model="formDialogVisible" :title="isEditMode ? '编辑库存调整单' : '新增库存调整单'" width="920px">
+    <el-dialog v-model="formDialogVisible" :title="isEditMode ? '编辑库存调整单' : '新增库存调整单'" width="1040px">
       <el-form ref="orderFormRef" :model="orderForm" :rules="orderRules" label-width="90px">
         <el-row :gutter="16">
           <el-col :xs="24" :md="8">
@@ -64,24 +64,56 @@
           <el-input v-model.trim="orderForm.reason" maxlength="255" placeholder="请输入调整说明" />
         </el-form-item>
 
+        <el-alert
+          v-if="isDamageOrQualityIssueReason(orderForm.reasonType)"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="reason-hint"
+          title="破损、质量问题不能直接调减库存，请为相关明细选择「转异常区」动作，实物仍然存在，只是转入异常区并冻结"
+        />
+
         <div class="items-header">
           <h3>明细</h3>
           <el-button :disabled="!orderForm.warehouseId" @click="addItem">新增明细</el-button>
         </div>
 
         <el-table :data="orderForm.items" border class="order-items-table">
-          <el-table-column label="库存记录" min-width="300">
+          <el-table-column label="调整动作" width="160">
+            <template #default="{ row }">
+              <el-select v-model="row.adjustAction" placeholder="动作" @change="() => handleActionChange(row)">
+                <el-option v-for="option in adjustActionOptions" :key="option.value" :label="option.label" :value="option.value" />
+              </el-select>
+              <div v-if="row.adjustAction === 'TRANSFER_TO_EXCEPTION'" class="action-hint">
+                不减少库存总量，转入异常区并冻结，不生成财务事件
+              </div>
+              <div v-else-if="row.adjustAction === 'RESTORE_FROM_EXCEPTION'" class="action-hint">
+                恢复为可用库存，不生成财务事件
+              </div>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="源库存 / SKU" min-width="260">
             <template #default="{ row, $index }">
               <div v-if="row.mode === 'inventory'" class="inventory-cell">
                 <template v-if="row.inventoryId">
                   <div class="inventory-cell__sku">{{ row.skuCode }} - {{ row.skuName }}</div>
-                  <div class="inventory-cell__location">{{ row.warehouseCode }} / {{ row.areaCode }} / {{ row.locationCode }}</div>
+                  <div class="inventory-cell__location">
+                    {{ row.warehouseCode }} / {{ row.areaCode }} / {{ row.locationCode }}
+                    <el-tag v-if="row.inventoryStatus === 'EXCEPTION'" size="small" type="danger" effect="plain">异常区</el-tag>
+                  </div>
                   <div class="inventory-cell__snapshot">
                     现存 {{ row.onHandQty }} · 锁定 {{ row.lockedQty }} · 冻结 {{ row.frozenQty }} · 可用 {{ row.availableQty }}
                   </div>
                 </template>
                 <el-button size="small" @click="openInventoryPicker($index)">{{ row.inventoryId ? '重新选择' : '选择库存' }}</el-button>
-                <el-button size="small" type="warning" link @click="toggleOffBookMode(row)">切换为账外调增</el-button>
+                <el-button
+                  v-if="row.adjustAction === 'QUANTITY_INCREASE'"
+                  size="small"
+                  type="warning"
+                  link
+                  @click="toggleOffBookMode(row)"
+                >切换为账外调增</el-button>
               </div>
               <div v-else class="offbook-cell">
                 <el-alert type="warning" :closable="false" show-icon class="offbook-cell__alert">
@@ -100,14 +132,36 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="调整类型" width="110">
+
+          <el-table-column label="目标库区 / 库位" min-width="220">
             <template #default="{ row }">
-              <el-select v-model="row.adjustType" placeholder="类型" :disabled="row.mode === 'offbook'">
-                <el-option label="调增" value="INCREASE" />
-                <el-option label="调减" value="DECREASE" />
-              </el-select>
+              <template v-if="row.adjustAction === 'TRANSFER_TO_EXCEPTION' || row.adjustAction === 'RESTORE_FROM_EXCEPTION'">
+                <el-select
+                  v-model="row.targetAreaId"
+                  filterable
+                  placeholder="目标库区"
+                  size="small"
+                  class="offbook-cell__select"
+                  :disabled="!row.targetAreaOptions.length"
+                  @change="() => handleTargetAreaChange(row)"
+                >
+                  <el-option v-for="area in row.targetAreaOptions" :key="area.id" :label="`${area.areaCode} - ${area.areaName}`" :value="area.id" />
+                </el-select>
+                <el-select
+                  v-model="row.targetLocationId"
+                  filterable
+                  placeholder="目标库位"
+                  size="small"
+                  class="offbook-cell__select target-location-select"
+                  :disabled="!row.targetLocationOptions.length"
+                >
+                  <el-option v-for="location in row.targetLocationOptions" :key="location.id" :label="location.locationCode" :value="location.id" />
+                </el-select>
+              </template>
+              <span v-else class="target-cell__placeholder">-</span>
             </template>
           </el-table-column>
+
           <el-table-column label="数量" width="140">
             <template #default="{ row }">
               <el-input-number v-model="row.adjustQty" :min="1" :precision="0" controls-position="right" />
@@ -131,7 +185,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="inventoryPickerVisible" title="选择库存记录" width="900px" append-to-body>
+    <el-dialog v-model="inventoryPickerVisible" title="选择库存记录" width="960px" append-to-body>
       <CommonQueryForm
         :model="pickerQueryForm"
         :fields="pickerQueryFields"
@@ -147,13 +201,17 @@
         empty-text="暂无可选库存"
         @pagination-change="fetchPickerInventories"
       >
+        <template #areaType="{ row }">
+          <el-tag v-if="row.inventoryStatus === 'EXCEPTION'" size="small" type="danger" effect="plain">异常区</el-tag>
+          <span v-else>{{ row.areaType || '-' }}</span>
+        </template>
         <template #pickerActions="{ row }">
           <el-button type="primary" link @click="selectInventory(row)">选择</el-button>
         </template>
       </CommonDataTable>
     </el-dialog>
 
-    <el-dialog v-model="detailVisible" title="库存调整单详情" width="880px">
+    <el-dialog v-model="detailVisible" title="库存调整单详情" width="960px">
       <el-descriptions v-if="activeOrder" :column="2" border>
         <el-descriptions-item label="调整单号">{{ activeOrder.adjustNo }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ statusLabel(activeOrder.status) }}</el-descriptions-item>
@@ -170,10 +228,20 @@
         :show-pagination="false"
         empty-text="暂无明细"
       >
-        <template #adjustType="{ row }">{{ row.adjustType === 'INCREASE' ? '调增' : '调减' }}</template>
+        <template #adjustAction="{ row }">{{ adjustActionLabel(row.adjustAction) }}</template>
         <template #source="{ row }">
           <el-tag v-if="row.offBookIncrease" type="warning" effect="plain">账外调增</el-tag>
           <span v-else>已有库存</span>
+        </template>
+        <template #target="{ row }">
+          <span v-if="row.targetAreaCode">{{ row.targetAreaCode }} / {{ row.targetLocationCode || '-' }}</span>
+          <span v-else>-</span>
+        </template>
+        <template #holdStatus="{ row }">
+          <el-tag v-if="row.holdStatus && row.holdStatus !== 'NONE'" size="small" :type="holdStatusTagType(row.holdStatus)" effect="plain">
+            {{ holdStatusLabel(row.holdStatus) }}
+          </el-tag>
+          <span v-else>-</span>
         </template>
       </CommonDataTable>
     </el-dialog>
@@ -239,6 +307,25 @@ const statusOptions = [
   { label: '已取消', value: 'CANCELLED' }
 ]
 
+const adjustActionOptions = [
+  { label: '数量调增', value: 'QUANTITY_INCREASE' },
+  { label: '数量调减', value: 'QUANTITY_DECREASE' },
+  { label: '转异常区', value: 'TRANSFER_TO_EXCEPTION' },
+  { label: '异常恢复正常', value: 'RESTORE_FROM_EXCEPTION' }
+]
+
+const holdStatusOptions = [
+  { label: '无冻结', value: 'NONE' },
+  { label: '已冻结', value: 'HELD' },
+  { label: '已释放', value: 'RELEASED' },
+  { label: '已消耗', value: 'CONSUMED' }
+]
+
+const inventoryStatusOptions = [
+  { label: '正常', value: 'NORMAL' },
+  { label: '异常', value: 'EXCEPTION' }
+]
+
 const queryFields = [
   { prop: 'adjustNo', label: '调整单号', type: 'input', placeholder: '请输入调整单号', trim: true },
   { prop: 'status', label: '状态', type: 'select', placeholder: '请选择状态', options: statusOptions },
@@ -261,8 +348,10 @@ const detailColumns = [
   { prop: 'skuCode', label: 'SKU', minWidth: 130, formatter: (row) => `${row.skuCode || ''} ${row.skuName || ''}`.trim() || '-' },
   { prop: 'areaCode', label: '库区', width: 90 },
   { prop: 'locationCode', label: '库位', width: 90 },
-  { label: '类型', width: 80, slot: 'adjustType' },
+  { label: '动作', width: 110, slot: 'adjustAction' },
   { prop: 'adjustQty', label: '数量', width: 80, align: 'right' },
+  { label: '目标库区/库位', width: 150, slot: 'target' },
+  { label: '冻结状态', width: 90, slot: 'holdStatus' },
   { prop: 'beforeOnHandQty', label: '调整前现存量', width: 110, align: 'right' },
   { prop: 'afterOnHandQty', label: '调整后现存量', width: 110, align: 'right' },
   { prop: 'beforeAvailableQty', label: '调整前可用量', width: 110, align: 'right' },
@@ -273,18 +362,21 @@ const detailColumns = [
 const pickerQueryForm = reactive({
   skuCode: '',
   areaId: '',
-  locationCode: ''
+  locationCode: '',
+  inventoryStatus: ''
 })
 
 const pickerQueryFields = computed(() => [
   { prop: 'skuCode', label: 'SKU 编码', type: 'input', placeholder: '请输入 SKU 编码', trim: true },
   { prop: 'areaId', label: '库区', type: 'select', placeholder: '请选择库区', options: areaOptions.value.map((area) => ({ label: `${area.areaCode} - ${area.areaName}`, value: area.id })) },
-  { prop: 'locationCode', label: '库位', type: 'input', placeholder: '请输入库位编码（可选）', trim: true }
+  { prop: 'locationCode', label: '库位', type: 'input', placeholder: '请输入库位编码（可选）', trim: true },
+  { prop: 'inventoryStatus', label: '库存状态', type: 'select', placeholder: '不限', options: inventoryStatusOptions }
 ])
 
 const pickerColumns = [
   { prop: 'skuCode', label: 'SKU', minWidth: 140, formatter: (row) => `${row.skuCode} - ${row.skuName}` },
   { prop: 'areaCode', label: '库区', width: 100 },
+  { label: '库区类型', width: 100, slot: 'areaType' },
   { prop: 'locationCode', label: '库位', width: 100 },
   { prop: 'quantity', label: '现存量', width: 90, align: 'right' },
   { prop: 'reservedQuantity', label: '锁定量', width: 90, align: 'right' },
@@ -295,20 +387,40 @@ const pickerColumns = [
 
 const reasonTypeLabel = (value) => reasonTypeOptions.find((option) => option.value === value)?.label || value || '-'
 const statusLabel = (value) => statusOptions.find((option) => option.value === value)?.label || value || '-'
+const adjustActionLabel = (value) => adjustActionOptions.find((option) => option.value === value)?.label || value || '-'
+const holdStatusLabel = (value) => holdStatusOptions.find((option) => option.value === value)?.label || value || '-'
+const holdStatusTagType = (value) => {
+  if (value === 'HELD') return 'warning'
+  if (value === 'CONSUMED') return 'success'
+  return 'info'
+}
 const statusTagType = (status) => {
   if (status === 'COMPLETED') return 'success'
   if (status === 'CANCELLED') return 'info'
   if (status === 'SUBMITTED') return 'warning'
   return 'primary'
 }
+const isDamageOrQualityIssueReason = (reasonType) => reasonType === 'DAMAGE' || reasonType === 'QUALITY_ISSUE'
+
+const filterTargetAreaOptions = (action) => {
+  if (action === 'TRANSFER_TO_EXCEPTION') {
+    return areaOptions.value.filter((area) => area.areaType === 'EXCEPTION')
+  }
+  if (action === 'RESTORE_FROM_EXCEPTION') {
+    return areaOptions.value.filter((area) => area.areaType !== 'EXCEPTION')
+  }
+  return []
+}
 
 const initialItem = () => ({
   mode: 'inventory',
+  adjustAction: 'QUANTITY_INCREASE',
   inventoryId: null,
   skuCode: '',
   skuName: '',
   warehouseCode: '',
   areaCode: '',
+  inventoryStatus: '',
   locationCode: '',
   onHandQty: 0,
   lockedQty: 0,
@@ -318,7 +430,10 @@ const initialItem = () => ({
   areaId: '',
   locationId: '',
   locationOptions: [],
-  adjustType: 'INCREASE',
+  targetAreaId: '',
+  targetLocationId: '',
+  targetAreaOptions: [],
+  targetLocationOptions: [],
   adjustQty: 1,
   remark: ''
 })
@@ -369,6 +484,21 @@ const handleItemAreaChange = async (item) => {
   item.locationOptions = await loadUsableLocations(item.areaId)
 }
 
+const handleActionChange = (row) => {
+  if (row.adjustAction !== 'QUANTITY_INCREASE' && row.mode === 'offbook') {
+    row.mode = 'inventory'
+  }
+  row.targetAreaId = ''
+  row.targetLocationId = ''
+  row.targetLocationOptions = []
+  row.targetAreaOptions = filterTargetAreaOptions(row.adjustAction)
+}
+
+const handleTargetAreaChange = async (row) => {
+  row.targetLocationId = ''
+  row.targetLocationOptions = await loadUsableLocations(row.targetAreaId)
+}
+
 const addItem = () => {
   orderForm.items.push(initialItem())
 }
@@ -384,7 +514,7 @@ const toggleOffBookMode = (row) => {
     orderForm.items.splice(index, 1, {
       ...initialItem(),
       mode: 'offbook',
-      adjustType: 'INCREASE',
+      adjustAction: 'QUANTITY_INCREASE',
       adjustQty: row.adjustQty,
       remark: row.remark
     })
@@ -392,6 +522,7 @@ const toggleOffBookMode = (row) => {
     orderForm.items.splice(index, 1, {
       ...initialItem(),
       mode: 'inventory',
+      adjustAction: 'QUANTITY_INCREASE',
       adjustQty: row.adjustQty,
       remark: row.remark
     })
@@ -400,9 +531,15 @@ const toggleOffBookMode = (row) => {
 
 const openInventoryPicker = (index) => {
   activeItemIndex.value = index
+  const row = orderForm.items[index]
   pickerQueryForm.skuCode = ''
   pickerQueryForm.areaId = ''
   pickerQueryForm.locationCode = ''
+  pickerQueryForm.inventoryStatus = row.adjustAction === 'TRANSFER_TO_EXCEPTION'
+    ? 'NORMAL'
+    : row.adjustAction === 'RESTORE_FROM_EXCEPTION'
+      ? 'EXCEPTION'
+      : ''
   pickerPagination.pageNum = 1
   inventoryPickerVisible.value = true
   fetchPickerInventories()
@@ -419,6 +556,7 @@ const fetchPickerInventories = async () => {
     }
     if (pickerQueryForm.skuCode) params.skuCode = pickerQueryForm.skuCode
     if (pickerQueryForm.areaId) params.areaId = pickerQueryForm.areaId
+    if (pickerQueryForm.inventoryStatus) params.inventoryStatus = pickerQueryForm.inventoryStatus
     const response = await axios.get('/inventory', { params })
     const { rows, total } = normalizePageResponse(response)
     const locationFilter = pickerQueryForm.locationCode?.trim().toLowerCase()
@@ -440,6 +578,7 @@ const handlePickerReset = () => {
   pickerQueryForm.skuCode = ''
   pickerQueryForm.areaId = ''
   pickerQueryForm.locationCode = ''
+  pickerQueryForm.inventoryStatus = ''
   pickerPagination.pageNum = 1
   fetchPickerInventories()
 }
@@ -451,6 +590,7 @@ const applyInventoryToItem = (item, inventory) => {
   item.skuName = inventory.skuName
   item.warehouseCode = inventory.warehouseCode
   item.areaCode = inventory.areaCode
+  item.inventoryStatus = inventory.inventoryStatus
   item.locationCode = inventory.locationCode
   item.onHandQty = inventory.quantity
   item.lockedQty = inventory.reservedQuantity
@@ -524,22 +664,33 @@ const openEditDialog = async (row) => {
   areaOptions.value = await loadUsableAreas(order.warehouseId)
   orderForm.items = []
   for (const item of order.items) {
-    if (item.offBookIncrease) {
+    const action = item.adjustAction || (item.adjustType === 'INCREASE' ? 'QUANTITY_INCREASE' : 'QUANTITY_DECREASE')
+    if (action === 'TRANSFER_TO_EXCEPTION' || action === 'RESTORE_FROM_EXCEPTION') {
+      const inventoryResponse = await axios.get(`/inventory/${item.inventoryId}`)
+      const inventory = unwrapApiData(inventoryResponse)
+      const newItem = { ...initialItem(), adjustAction: action, adjustQty: item.adjustQty, remark: item.remark || '' }
+      applyInventoryToItem(newItem, inventory)
+      newItem.targetAreaOptions = filterTargetAreaOptions(action)
+      newItem.targetAreaId = item.targetAreaId
+      newItem.targetLocationOptions = await loadUsableLocations(item.targetAreaId)
+      newItem.targetLocationId = item.targetLocationId
+      orderForm.items.push(newItem)
+    } else if (item.offBookIncrease) {
       orderForm.items.push({
         ...initialItem(),
         mode: 'offbook',
+        adjustAction: 'QUANTITY_INCREASE',
         skuId: item.skuId,
         areaId: item.areaId,
         locationId: item.locationId,
         locationOptions: await loadUsableLocations(item.areaId),
-        adjustType: 'INCREASE',
         adjustQty: item.adjustQty,
         remark: item.remark || ''
       })
     } else {
       const inventoryResponse = await axios.get(`/inventory/${item.inventoryId}`)
       const inventory = unwrapApiData(inventoryResponse)
-      const newItem = { ...initialItem(), adjustType: item.adjustType, adjustQty: item.adjustQty, remark: item.remark || '' }
+      const newItem = { ...initialItem(), adjustAction: action, adjustQty: item.adjustQty, remark: item.remark || '' }
       applyInventoryToItem(newItem, inventory)
       orderForm.items.push(newItem)
     }
@@ -557,12 +708,38 @@ const validateItems = () => {
       ElMessage.warning('调整数量必须大于 0')
       return false
     }
+
+    if (item.adjustAction === 'TRANSFER_TO_EXCEPTION' || item.adjustAction === 'RESTORE_FROM_EXCEPTION') {
+      if (!item.inventoryId) {
+        ElMessage.warning('请先为每条转移/恢复明细选择源库存')
+        return false
+      }
+      if (!item.targetAreaId || !item.targetLocationId) {
+        ElMessage.warning('请选择目标库区和目标库位')
+        return false
+      }
+      if (item.adjustAction === 'TRANSFER_TO_EXCEPTION' && item.adjustQty > item.availableQty) {
+        ElMessage.warning(`转移数量不能超过源库存可用量（当前可用 ${item.availableQty}）`)
+        return false
+      }
+      if (item.adjustAction === 'RESTORE_FROM_EXCEPTION' && item.adjustQty > item.onHandQty) {
+        ElMessage.warning(`恢复数量不能超过源库存现存量（当前现存 ${item.onHandQty}）`)
+        return false
+      }
+      continue
+    }
+
+    if (item.adjustAction === 'QUANTITY_DECREASE' && isDamageOrQualityIssueReason(orderForm.reasonType)) {
+      ElMessage.warning('破损、质量问题不能直接调减库存，请使用「转异常区」')
+      return false
+    }
+
     if (item.mode === 'inventory') {
       if (!item.inventoryId) {
         ElMessage.warning('请先为每条明细选择库存记录，或改用账外库存调增')
         return false
       }
-      if (item.adjustType === 'DECREASE' && item.adjustQty > item.availableQty) {
+      if (item.adjustAction === 'QUANTITY_DECREASE' && item.adjustQty > item.availableQty) {
         ElMessage.warning(`调减数量不能超过可用量（当前可用 ${item.availableQty}）`)
         return false
       }
@@ -574,14 +751,33 @@ const validateItems = () => {
   return true
 }
 
+const legacyAdjustType = (action) => (action === 'QUANTITY_INCREASE' ? 'INCREASE' : 'DECREASE')
+
 const buildItemsPayload = () => orderForm.items.map((item) => {
+  if (item.adjustAction === 'TRANSFER_TO_EXCEPTION' || item.adjustAction === 'RESTORE_FROM_EXCEPTION') {
+    return {
+      inventoryId: item.inventoryId,
+      skuId: null,
+      areaId: null,
+      locationId: null,
+      adjustType: 'DECREASE',
+      adjustAction: item.adjustAction,
+      adjustQty: item.adjustQty,
+      allowCreateInventory: false,
+      targetWarehouseId: orderForm.warehouseId,
+      targetAreaId: item.targetAreaId,
+      targetLocationId: item.targetLocationId,
+      remark: item.remark || null
+    }
+  }
   if (item.mode === 'inventory') {
     return {
       inventoryId: item.inventoryId,
       skuId: null,
       areaId: null,
       locationId: null,
-      adjustType: item.adjustType,
+      adjustType: legacyAdjustType(item.adjustAction),
+      adjustAction: item.adjustAction,
       adjustQty: item.adjustQty,
       allowCreateInventory: false,
       remark: item.remark || null
@@ -593,6 +789,7 @@ const buildItemsPayload = () => orderForm.items.map((item) => {
     areaId: item.areaId,
     locationId: item.locationId,
     adjustType: 'INCREASE',
+    adjustAction: 'QUANTITY_INCREASE',
     adjustQty: item.adjustQty,
     allowCreateInventory: true,
     remark: item.remark || null
@@ -683,7 +880,12 @@ const openCreateDialogFromInventory = async (inventoryId) => {
   resetForm()
   orderForm.warehouseId = inventory.warehouseId
   areaOptions.value = await loadUsableAreas(inventory.warehouseId)
-  applyInventoryToItem(orderForm.items[0], inventory)
+  const item = orderForm.items[0]
+  applyInventoryToItem(item, inventory)
+  if (inventory.inventoryStatus === 'EXCEPTION') {
+    item.adjustAction = 'RESTORE_FROM_EXCEPTION'
+    item.targetAreaOptions = filterTargetAreaOptions('RESTORE_FROM_EXCEPTION')
+  }
   formDialogVisible.value = true
 }
 
@@ -707,6 +909,14 @@ onMounted(async () => {
 .items-header h3 {
   margin: 0;
   font-size: 15px;
+}
+
+.reason-hint {
+  margin-top: 12px;
+}
+
+.order-items-table {
+  margin-top: 14px;
 }
 
 .order-items-table :deep(.el-select) {
@@ -747,5 +957,20 @@ onMounted(async () => {
 
 .offbook-cell__select {
   width: 100%;
+}
+
+.target-location-select {
+  margin-top: 6px;
+}
+
+.target-cell__placeholder {
+  color: #94a3b8;
+}
+
+.action-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
 }
 </style>

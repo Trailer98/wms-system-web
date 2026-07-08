@@ -24,10 +24,10 @@
       @pagination-change="fetchTransactions"
     >
       <template #type="{ row }">
-        <el-tag effect="plain">{{ movementTypeLabel(row.type) }}</el-tag>
+        <el-tag :type="row.bizTypeTagType || ''" effect="plain">{{ row.bizTypeLabel || row.type }}</el-tag>
       </template>
       <template #operationType="{ row }">
-        <el-tag type="success" effect="plain">{{ operationTypeLabel(row.operationType) }}</el-tag>
+        <el-tag :type="row.operationTypeTagType || ''" effect="plain">{{ row.operationTypeLabel || row.operationType }}</el-tag>
       </template>
       <template #actions="{ row }">
         <el-button type="primary" link @click="openDetail(row)">详情</el-button>
@@ -36,8 +36,8 @@
 
     <el-dialog v-model="detailVisible" title="库存流水详情" width="560px">
       <el-descriptions v-if="activeMovement" :column="2" border>
-        <el-descriptions-item label="业务类型">{{ movementTypeLabel(activeMovement.type) }}</el-descriptions-item>
-        <el-descriptions-item label="操作类型">{{ operationTypeLabel(activeMovement.operationType) }}</el-descriptions-item>
+        <el-descriptions-item label="业务类型">{{ activeMovement.bizTypeLabel || activeMovement.type }}</el-descriptions-item>
+        <el-descriptions-item label="操作类型">{{ activeMovement.operationTypeLabel || activeMovement.operationType }}</el-descriptions-item>
         <el-descriptions-item label="业务单号">{{ activeMovement.businessNo }}</el-descriptions-item>
         <el-descriptions-item label="SKU">{{ activeMovement.skuCode }} {{ activeMovement.skuName }}</el-descriptions-item>
         <el-descriptions-item label="仓库">{{ activeMovement.warehouseCode }}</el-descriptions-item>
@@ -60,6 +60,7 @@
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { useDict } from '../composables/useDict'
 import { formatDateTime, normalizePageResponse } from '../utils/apiResponse'
 
 const axios = inject('$axios')
@@ -72,30 +73,16 @@ const locationOptions = ref([])
 const detailVisible = ref(false)
 const activeMovement = ref(null)
 
-const movementTypeOptions = [
-  { label: '入库', value: 'INBOUND' },
-  { label: '出库', value: 'OUTBOUND' },
-  { label: '锁库', value: 'LOCK' },
-  { label: '解锁', value: 'UNLOCK' },
-  { label: '库存调整', value: 'ADJUSTMENT' },
-  { label: '库存盘点', value: 'COUNT' }
-]
+const BIZ_TYPE_DICT = 'stock_movement_biz_type'
+const OPERATION_TYPE_DICT = 'stock_movement_operation_type'
+const { preload: preloadDicts, getDictOptions } = useDict([BIZ_TYPE_DICT, OPERATION_TYPE_DICT])
 
-const operationTypeOptions = [
-  { label: '入库收货', value: 'INBOUND_RECEIVE' },
-  { label: '出库锁库', value: 'OUTBOUND_LOCK' },
-  { label: '出库取消解锁', value: 'OUTBOUND_CANCEL_UNLOCK' },
-  { label: '出库发货', value: 'OUTBOUND_SHIP' },
-  { label: '库存调整增加', value: 'STOCK_ADJUST_INCREASE' },
-  { label: '库存调整减少', value: 'STOCK_ADJUST_DECREASE' },
-  { label: '库存盘点盘盈', value: 'STOCK_COUNT_PROFIT' },
-  { label: '库存盘点盘亏', value: 'STOCK_COUNT_LOSS' },
-  { label: '库存冻结', value: 'STOCK_FREEZE' },
-  { label: '库存解冻', value: 'STOCK_UNFREEZE' },
-  { label: '移库转出', value: 'TRANSFER_OUT' },
-  { label: '移库转入', value: 'TRANSFER_IN' },
-  { label: '未知操作', value: 'UNKNOWN' }
-]
+// Filter-dropdown options come from the dictionary (business logic never depends on this list — see
+// SysDictService). If the dictionary endpoint is unreachable, getDictOptions() just returns [], so the
+// dropdowns render empty instead of throwing; the page and its list/detail label rendering (which read
+// bizTypeLabel/operationTypeLabel straight off each row, already resolved server-side) stay usable.
+const movementTypeOptions = computed(() => getDictOptions(BIZ_TYPE_DICT))
+const operationTypeOptions = computed(() => getDictOptions(OPERATION_TYPE_DICT))
 
 const queryForm = reactive({
   skuId: '',
@@ -143,8 +130,8 @@ const handleAreaChange = async () => {
 
 const queryFields = computed(() => [
   { prop: 'businessNo', label: '业务单号', type: 'input', placeholder: '请输入业务单号', trim: true },
-  { prop: 'type', label: '业务类型', type: 'select', placeholder: '请选择业务类型', options: movementTypeOptions },
-  { prop: 'operationType', label: '操作类型', type: 'select', placeholder: '请选择操作类型', options: operationTypeOptions },
+  { prop: 'type', label: '业务类型', type: 'select', placeholder: '请选择业务类型', options: movementTypeOptions.value },
+  { prop: 'operationType', label: '操作类型', type: 'select', placeholder: '请选择操作类型', options: operationTypeOptions.value },
   { prop: 'skuId', label: 'SKU', type: 'select', placeholder: '请选择 SKU', options: skuOptions.value, attrs: { filterable: true } },
   { prop: 'warehouseId', label: '仓库', type: 'select', placeholder: '请选择仓库', options: warehouseOptions.value, attrs: { filterable: true, onChange: handleWarehouseChange } },
   { prop: 'areaId', label: '库区', type: 'select', placeholder: '请先选择仓库', options: areaOptions.value, attrs: { filterable: true, disabled: !areaOptions.value.length, onChange: handleAreaChange } },
@@ -166,9 +153,6 @@ const tableColumns = [
   { label: '操作时间', minWidth: 170, formatter: (row) => formatDateTime(row.occurredAt) },
   { label: '操作', width: 90, slot: 'actions', fixed: 'right', align: 'center' }
 ]
-
-const movementTypeLabel = (value) => movementTypeOptions.find((option) => option.value === value)?.label || value || '-'
-const operationTypeLabel = (value) => operationTypeOptions.find((option) => option.value === value)?.label || value || '-'
 
 const fetchOptions = async () => {
   const [warehouseResponse, skuResponse] = await Promise.all([
@@ -238,7 +222,7 @@ const handleReset = () => {
 onMounted(async () => {
   loading.value = true
   try {
-    await fetchOptions()
+    await Promise.all([preloadDicts(), fetchOptions()])
     await fetchTransactions()
   } finally {
     loading.value = false

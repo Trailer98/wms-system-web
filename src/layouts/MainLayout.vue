@@ -65,6 +65,7 @@
             <el-menu-item v-if="authStore.hasPermission('exception:view')" index="/wms-exceptions">异常事件查询</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('user:view')" index="/users">用户管理</el-menu-item>
             <el-menu-item v-if="authStore.hasPermission('role:view')" index="/roles">角色管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('sys-dict:view')" index="/sys-dicts">数据字典</el-menu-item>
             <el-menu-item index="/settings">系统设置</el-menu-item>
           </el-sub-menu>
         </el-menu>
