@@ -36,10 +36,21 @@ const axios = inject('$axios')
 const loading = ref(false)
 const logs = ref([])
 
+const BIZ_TYPE_LABELS = {
+  INBOUND_ORDER: '入库单',
+  OUTBOUND_ORDER: '出库单',
+  STOCK_ADJUST_ORDER: '库存调整单',
+  STOCK_COUNT_TASK: '库存盘点单',
+  WMS_EXCEPTION: '异常事件'
+}
+
+const formatBizType = (bizType) => (bizType ? BIZ_TYPE_LABELS[bizType] || bizType : '-')
+
 const queryForm = reactive({
   operator: '',
   operationType: '',
   bizNo: '',
+  bizType: '',
   timeRange: []
 })
 
@@ -72,6 +83,13 @@ const queryFields = [
     trim: true
   },
   {
+    prop: 'bizType',
+    label: '业务类型',
+    type: 'select',
+    placeholder: '请选择业务类型',
+    options: Object.entries(BIZ_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+  },
+  {
     prop: 'timeRange',
     label: '时间范围',
     type: 'date-picker',
@@ -101,10 +119,20 @@ const tableColumns = [
     formatter: (row) => row.operationType || row.type || row.action || '-'
   },
   {
+    label: '业务类型',
+    minWidth: 120,
+    formatter: (row) => formatBizType(row.bizType)
+  },
+  {
     label: '业务单号',
     minWidth: 150,
     showOverflowTooltip: true,
     formatter: (row) => row.bizNo || '-'
+  },
+  {
+    label: '业务ID',
+    minWidth: 100,
+    formatter: (row) => row.bizId ?? '-'
   },
   {
     label: 'IP 地址',
@@ -133,6 +161,7 @@ const buildParams = () => {
   if (queryForm.operator) params.operator = queryForm.operator
   if (queryForm.operationType) params.operationType = queryForm.operationType
   if (queryForm.bizNo) params.bizNo = queryForm.bizNo
+  if (queryForm.bizType) params.bizType = queryForm.bizType
   if (queryForm.timeRange?.length === 2) {
     params.startTime = queryForm.timeRange[0]
     params.endTime = queryForm.timeRange[1]
@@ -167,6 +196,7 @@ const handleReset = () => {
   queryForm.operator = ''
   queryForm.operationType = ''
   queryForm.bizNo = ''
+  queryForm.bizType = ''
   queryForm.timeRange = []
   pagination.pageNum = 1
   fetchLogs()
