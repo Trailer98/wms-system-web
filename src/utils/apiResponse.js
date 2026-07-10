@@ -31,13 +31,31 @@ export const normalizePageResponse = (response) => {
     }
   }
 
-  const rows = payload.records || payload.list || payload.content || []
+  // Tolerate every list-key convention we might meet (MyBatis-Plus uses `records`; other backends
+  // use `list`/`rows`/`content`) so a single normalizer covers every paged endpoint in this app.
+  const rows = payload.records || payload.list || payload.rows || payload.content || []
+
+  const hasTotal = payload.total !== undefined && payload.total !== null
+  const hasTotalElements = payload.totalElements !== undefined && payload.totalElements !== null
+  if (!hasTotal && !hasTotalElements) {
+    // The endpoint returned an object without a total — pagination will only ever show one page.
+    // Fall back to rows.length so the count isn't wrong-looking, but flag it: this usually means a
+    // non-paginated endpoint got fed through normalizePageResponse by mistake.
+    console.warn('[normalizePageResponse] response has no `total`/`totalElements`; falling back to rows.length. This endpoint may not be paginated.')
+  }
+
+  // The backend serializes total/pageNum/pageSize (Java Long) as JSON strings ("6373"). Element Plus
+  // el-pagination validates `total` as a Number and silently refuses to render if it's a String, so
+  // every numeric paging field must be coerced here (the one place every list page reads them from).
+  const rawTotal = payload.total ?? payload.totalElements ?? rows.length
+  const rawPageNum = payload.pageNum ?? payload.current ?? 1
+  const rawPageSize = payload.pageSize ?? payload.size ?? rows.length
 
   return {
     rows,
-    total: payload.total ?? payload.totalElements ?? rows.length,
-    pageNum: payload.pageNum ?? payload.current ?? 1,
-    pageSize: payload.pageSize ?? payload.size ?? rows.length
+    total: Number(rawTotal) || 0,
+    pageNum: Number(rawPageNum) || 1,
+    pageSize: Number(rawPageSize) || rows.length || 20
   }
 }
 

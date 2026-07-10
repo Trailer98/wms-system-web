@@ -41,7 +41,7 @@
         :current-page="pagination.pageNum"
         :page-size="pagination.pageSize"
         :page-sizes="pageSizes"
-        :total="pagination.total"
+        :total="Number(pagination.total) || 0"
         :layout="paginationLayout"
         background
         @size-change="handleSizeChange"
@@ -69,7 +69,7 @@ const props = defineProps({
     type: Object,
     default: () => ({
       pageNum: 1,
-      pageSize: 10,
+      pageSize: 20,
       total: 0
     })
   },

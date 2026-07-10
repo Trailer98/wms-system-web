@@ -148,7 +148,7 @@ const queryForm = reactive({
   status: ''
 })
 
-const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
+const pagination = reactive({ pageNum: 1, pageSize: 20, total: 0 })
 
 const statusOptions = [
   { label: '草稿', value: 'DRAFT' },

@@ -95,6 +95,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { inject, onMounted, reactive, ref } from 'vue'
 import CommonDataTable from '../components/common/CommonDataTable.vue'
 import CommonQueryForm from '../components/common/CommonQueryForm.vue'
+import { usePagination } from '../composables/usePagination'
 import { useAuthStore } from '../stores/auth'
 import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData } from '../utils/apiResponse'
 
@@ -111,11 +112,7 @@ const queryForm = reactive({
   status: ''
 })
 
-const pagination = reactive({
-  pageNum: 1,
-  pageSize: 10,
-  total: 0
-})
+const { pagination, resetToFirstPage, adjustPageAfterRemoval } = usePagination()
 
 const queryFields = [
   {
@@ -202,14 +199,14 @@ const fetchOrders = async () => {
 }
 
 const handleSearch = () => {
-  pagination.pageNum = 1
+  resetToFirstPage()
   fetchOrders()
 }
 
 const handleReset = () => {
   queryForm.orderNo = ''
   queryForm.status = ''
-  pagination.pageNum = 1
+  resetToFirstPage()
   fetchOrders()
 }
 
@@ -264,9 +261,11 @@ const deleteOrder = async (row) => {
   actionLoadingId.value = row.id
   try {
     await axios.delete(`/outbound-orders/${row.id}`)
-    orders.value = orders.value.filter((item) => item.id !== row.id)
-    pagination.total = Math.max(pagination.total - 1, 0)
     ElMessage.success('出库单已删除')
+    // Refresh the current page from the server (fresh total + fills the gap with the next page's
+    // first row); step back a page first if this was the only row left on a page past the first.
+    adjustPageAfterRemoval(1)
+    await fetchOrders()
   } finally {
     actionLoadingId.value = null
   }

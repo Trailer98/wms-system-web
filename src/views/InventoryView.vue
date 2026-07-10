@@ -19,9 +19,8 @@
       :data="inventory"
       :columns="tableColumns"
       :loading="loading"
-      :pagination="pagination"
+      :show-pagination="false"
       empty-text="暂无库存数据"
-      @pagination-change="fetchInventory"
     >
       <template #inventoryStatus="{ row }">
         <el-tag :type="row.inventoryStatus === 'NORMAL' ? 'success' : 'danger'" effect="plain">
@@ -44,6 +43,20 @@
         </el-button>
       </template>
     </CommonDataTable>
+
+    <!-- Explicit, always-rendered pagination in this page's own template (no v-if that could hide it). -->
+    <div class="pagination-container">
+      <el-pagination
+        v-model:current-page="pagination.pageNum"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="pagination.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        background
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
+    </div>
   </section>
 </template>
 
@@ -80,7 +93,7 @@ const queryForm = reactive({
 
 const pagination = reactive({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 20,
   total: 0
 })
 
@@ -211,10 +224,16 @@ const buildParams = () => {
 const fetchInventory = async () => {
   loading.value = true
   try {
-    const response = await axios.get('/inventory', { params: buildParams() })
-    const { rows, total } = normalizePageResponse(response)
-    inventory.value = rows
-    pagination.total = total
+    // The axios interceptor returns the API envelope { code, message, data }, so the paged body is res.data.
+    const res = await axios.get('/inventory', { params: buildParams() })
+    const page = res?.data ?? res ?? {}
+    inventory.value = Array.isArray(page.records) ? page.records : []
+    // The backend serializes total (a Long) as a JSON string ("6373"). el-pagination's `total` prop
+    // is validated as Number — a String value fails that check and the component never renders into
+    // the DOM (querySelectorAll('.el-pagination').length === 0). Coerce every numeric field to Number.
+    pagination.total = Number(page.total ?? 0)
+    pagination.pageNum = Number(page.pageNum ?? pagination.pageNum)
+    pagination.pageSize = Number(page.pageSize ?? pagination.pageSize)
   } finally {
     loading.value = false
   }
@@ -237,6 +256,19 @@ const handleReset = () => {
   fetchInventory()
 }
 
+// Clicking a page number: set the new page and re-query (request goes out with pageNum=<clicked>).
+const handleCurrentChange = (page) => {
+  pagination.pageNum = page
+  fetchInventory()
+}
+
+// Changing page size: reset to page 1 (per spec) and re-query with the new pageSize.
+const handleSizeChange = (size) => {
+  pagination.pageSize = size
+  pagination.pageNum = 1
+  fetchInventory()
+}
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -247,3 +279,11 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.pagination-container {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+</style>

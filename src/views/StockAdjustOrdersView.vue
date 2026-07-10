@@ -277,7 +277,7 @@ const orderFormRef = ref()
 const inventoryPickerVisible = ref(false)
 const pickerLoading = ref(false)
 const pickerInventories = ref([])
-const pickerPagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
+const pickerPagination = reactive({ pageNum: 1, pageSize: 20, total: 0 })
 const activeItemIndex = ref(null)
 
 const isEditMode = computed(() => !!activeOrderId.value)
@@ -288,7 +288,7 @@ const queryForm = reactive({
   reasonType: ''
 })
 
-const pagination = reactive({ pageNum: 1, pageSize: 10, total: 0 })
+const pagination = reactive({ pageNum: 1, pageSize: 20, total: 0 })
 
 const reasonTypeOptions = [
   { label: '破损', value: 'DAMAGE' },
