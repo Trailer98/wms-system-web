@@ -149,6 +149,24 @@ const routes = [
         meta: { permission: 'exception:view' }
       },
       {
+        path: 'ai/knowledge',
+        name: 'AiKnowledgeDocuments',
+        component: () => import('../views/ai/KnowledgeDocumentsView.vue'),
+        meta: { permission: 'ai-knowledge:view' }
+      },
+      {
+        path: 'ai/knowledge/search',
+        name: 'AiKnowledgeSearch',
+        component: () => import('../views/ai/KnowledgeSearchTestView.vue'),
+        meta: { permission: 'ai-knowledge:search' }
+      },
+      {
+        path: 'ai/rag/ask',
+        name: 'AiRagAsk',
+        component: () => import('../views/ai/AiRagAskView.vue'),
+        meta: { permission: 'ai-rag:ask' }
+      },
+      {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('../views/NotFoundView.vue')

@@ -59,6 +59,13 @@
             <el-menu-item v-if="authStore.hasPermission('outbound:view')" index="/outbound-orders/query">出库查询</el-menu-item>
           </el-sub-menu>
 
+          <el-sub-menu index="ai-mgmt" v-if="showAiGroup">
+            <template #title>AI 能力</template>
+            <el-menu-item v-if="authStore.hasPermission('ai-knowledge:view')" index="/ai/knowledge">知识管理</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('ai-knowledge:search')" index="/ai/knowledge/search">知识检索测试</el-menu-item>
+            <el-menu-item v-if="authStore.hasPermission('ai-rag:ask')" index="/ai/rag/ask">RAG 问答测试</el-menu-item>
+          </el-sub-menu>
+
           <el-sub-menu index="system-mgmt">
             <template #title>系统管理</template>
             <el-menu-item v-if="authStore.hasPermission('operation-log:view')" index="/operation-logs">日志查询</el-menu-item>
@@ -92,6 +99,7 @@ const menuGroups = [
   { index: 'inventory-mgmt', paths: ['/inventory', '/inventory/transactions', '/stock-adjust-orders', '/stock-count-tasks'] },
   { index: 'inbound-mgmt', paths: ['/inbound-orders', '/inbound-orders/query'] },
   { index: 'outbound-mgmt', paths: ['/outbound-orders', '/outbound-orders/query'] },
+  { index: 'ai-mgmt', paths: ['/ai/knowledge', '/ai/knowledge/search', '/ai/rag/ask'] },
   { index: 'system-mgmt', paths: ['/operation-logs', '/wms-exceptions', '/settings', '/users', '/roles'] }
 ]
 
@@ -116,6 +124,8 @@ const showInboundGroup = computed(() =>
   authStore.hasPermission('inbound:create') || authStore.hasPermission('inbound:view'))
 const showOutboundGroup = computed(() =>
   authStore.hasPermission('outbound:create') || authStore.hasPermission('outbound:view'))
+const showAiGroup = computed(() =>
+  authStore.hasPermission('ai-knowledge:view') || authStore.hasPermission('ai-knowledge:search') || authStore.hasPermission('ai-rag:ask'))
 
 const handleLogout = async () => {
   authStore.clear()
