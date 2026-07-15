@@ -63,10 +63,10 @@
 <script setup>
 import { computed, inject, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import CommonDataTable from '../components/common/CommonDataTable.vue'
-import CommonQueryForm from '../components/common/CommonQueryForm.vue'
-import { useAuthStore } from '../stores/auth'
-import { formatDateTime, normalizePageResponse } from '../utils/apiResponse'
+import CommonDataTable from '../../components/common/CommonDataTable.vue'
+import CommonQueryForm from '../../components/common/CommonQueryForm.vue'
+import { useAuthStore } from '../../stores/auth'
+import { formatDateTime, normalizePageResponse } from '../../utils/apiResponse'
 
 const axios = inject('$axios')
 const router = useRouter()

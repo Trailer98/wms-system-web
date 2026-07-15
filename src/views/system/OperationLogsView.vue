@@ -28,9 +28,9 @@
 
 <script setup>
 import { inject, onMounted, reactive, ref } from 'vue'
-import CommonDataTable from '../components/common/CommonDataTable.vue'
-import CommonQueryForm from '../components/common/CommonQueryForm.vue'
-import { normalizePageResponse } from '../utils/apiResponse'
+import CommonDataTable from '../../components/common/CommonDataTable.vue'
+import CommonQueryForm from '../../components/common/CommonQueryForm.vue'
+import { normalizePageResponse } from '../../utils/apiResponse'
 
 const axios = inject('$axios')
 const loading = ref(false)

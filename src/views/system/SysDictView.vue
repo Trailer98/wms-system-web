@@ -165,9 +165,9 @@ import {
   getDictTypesPage,
   updateDictItem,
   updateDictType
-} from '../api/sysDict'
-import { useAuthStore } from '../stores/auth'
-import { normalizePageResponse } from '../utils/apiResponse'
+} from '../../api/sysDict'
+import { useAuthStore } from '../../stores/auth'
+import { normalizePageResponse } from '../../utils/apiResponse'
 
 const authStore = useAuthStore()
 

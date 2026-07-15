@@ -142,8 +142,8 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import CommonDataTable from '../components/common/CommonDataTable.vue'
-import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData } from '../utils/apiResponse'
+import CommonDataTable from '../../components/common/CommonDataTable.vue'
+import { formatDateTime, normalizePageResponse, orderStatusLabel, unwrapApiData } from '../../utils/apiResponse.js'
 
 const axios = inject('$axios')
 const route = useRoute()

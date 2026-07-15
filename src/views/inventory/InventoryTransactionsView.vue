@@ -58,10 +58,10 @@
 
 <script setup>
 import { computed, inject, onMounted, reactive, ref } from 'vue'
-import CommonDataTable from '../components/common/CommonDataTable.vue'
-import CommonQueryForm from '../components/common/CommonQueryForm.vue'
-import { useDict } from '../composables/useDict'
-import { formatDateTime, normalizePageResponse } from '../utils/apiResponse'
+import CommonDataTable from '../../components/common/CommonDataTable.vue'
+import CommonQueryForm from '../../components/common/CommonQueryForm.vue'
+import { useDict } from '../../composables/useDict'
+import { formatDateTime, normalizePageResponse } from '../../utils/apiResponse'
 
 const axios = inject('$axios')
 const loading = ref(false)

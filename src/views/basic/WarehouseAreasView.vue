@@ -110,9 +110,9 @@
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { inject, onMounted, reactive, ref } from 'vue'
-import CommonDataTable from '../components/common/CommonDataTable.vue'
-import CommonQueryForm from '../components/common/CommonQueryForm.vue'
-import { formatDateTime, normalizePageResponse } from '../utils/apiResponse'
+import CommonDataTable from '../../components/common/CommonDataTable.vue'
+import CommonQueryForm from '../../components/common/CommonQueryForm.vue'
+import { formatDateTime, normalizePageResponse } from '../../utils/apiResponse'
 
 const axios = inject('$axios')
 const loading = ref(false)
